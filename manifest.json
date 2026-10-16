@@ -1,0 +1,17 @@
+{
+  "name": "DuoVibe - Couple Games",
+  "short_name": "DuoVibe",
+  "description": "Real-time couple games to play together, anywhere in the world",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF9F7",
+  "theme_color": "#E8364E",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💕</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

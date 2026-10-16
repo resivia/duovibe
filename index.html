@@ -2,11 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#FAF9F7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="DuoVibe" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
   <title>DuoVibe 💕 Real-Time Couple Games</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="features.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💕</text></svg>" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💕</text></svg>" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 </head>
@@ -44,23 +51,34 @@
 
   <script src="config.js"></script>
   <script src="app.js"></script>
+  <script src="features.js"></script>
   <script>
     // Scroll-triggered fade-in observer
     const fadeObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
+        if (entry.isIntersecting) entry.target.classList.add('visible');
       });
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
-    // Re-observe after any DOM change
     const domObserver = new MutationObserver(() => {
       document.querySelectorAll('.fade-in:not(.visible)').forEach(el => {
         fadeObserver.observe(el);
       });
     });
     domObserver.observe(document.getElementById('main-content'), { childList: true, subtree: true });
+
+    // Prevent iOS bounce scroll on body
+    document.body.addEventListener('touchmove', (e) => {
+      if (e.target === document.body) e.preventDefault();
+    }, { passive: false });
+
+    // Prevent double-tap zoom
+    let lastTouch = 0;
+    document.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTouch <= 300) e.preventDefault();
+      lastTouch = now;
+    }, { passive: false });
   </script>
 </body>
 </html>
