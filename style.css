@@ -960,3 +960,36 @@ body { overscroll-behavior-y: contain; }
   .nav-bar { height: 48px; }
   .main-container { padding-top: 8px; padding-bottom: 70px; }
 }
+/* Group Mode Player Badges */
+.player-badge {
+  display: inline-block;
+  background: #E8E6E3;
+  color: #1A1A1A;
+  padding: 4px 10px;
+  border-radius: 16px;
+  margin: 0 4px 4px 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lobby-header-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.call-action-btn {
+  background: #1A1A1A;
+  color: #FAF9F7;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.call-action-btn:hover {
+  background: #333;
+}

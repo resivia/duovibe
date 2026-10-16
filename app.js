@@ -1,25 +1,15 @@
-// DuoVibe Main Application Logic - LDR 11 Games & Voice Call Integrated
+// DuoVibe Group Mode (3–8 Players) — Real-Time Multiplayer
 
-const ALL_GAMES = [
-  { id: 'blind-rank', num: 1, title: 'Blind Ranking', emoji: '🔟', tag: 'TikTok Trend', desc: 'Rank 5 mystery items 1-5 without knowing what comes next!' },
-  { id: 'truths-lie', num: 2, title: '2 Truths & 1 Lie', emoji: '🤫', tag: 'Duo Game', desc: 'Write 3 statements — partner sniffs out the lie.' },
-  { id: 'would-rather', num: 3, title: 'Would You Rather', emoji: '⚖️', tag: 'Dilemmas', desc: 'Vote secretly on dilemmas. Compare choices side-by-side!' },
-  { id: 'this-or-that', num: 4, title: 'This or That', emoji: '⚡', tag: 'Rapid Fire', desc: 'Quick-fire choices — see if your tastes align in real time!' },
-  { id: 'red-green-flag', num: 5, title: 'Red or Green Flag', emoji: '🚩', tag: 'Opinion', desc: 'Judge dating scenarios — Red, Green, or Beige flag?' },
-  { id: 'couple-compat', num: 6, title: 'Compatibility Quiz', emoji: '🔮', tag: 'Secrets', desc: 'Answer relationship questions secretly & reveal match %!' },
-  { id: 'word-letters', num: 7, title: 'First / Last Letter', emoji: '🔤', tag: 'Word Battle', desc: 'Word matching constraints before the round timer runs out!' },
-  { id: 'categories-bomb', num: 8, title: 'Pass The Bomb', emoji: '💣', tag: 'Adrenaline', desc: 'Name items fast before the bomb explodes on your screen!' },
-  { id: 'guess-age', num: 9, title: 'Guess The Age', emoji: '🎂', tag: 'Visual Guess', desc: 'Both guess numbers/ages — closest guess wins!' },
-  { id: 'guess-number', num: 10, title: 'Guess The Number', emoji: '🔢', tag: 'Hot or Cold', desc: 'Race to find secret number 1-100 with live higher/lower hints!' },
-  { id: 'guess-celeb', num: 11, title: 'Guess Celebrity', emoji: '🌟', tag: 'Mystery Pop', desc: 'Unlock clues together and guess the star!' }
-];
+const MAX_PLAYERS = 8;
+const MIN_PLAYERS = 3;
 
 window.App = {
   currentRoom: null,
-  activeFilter: 'all',
+  players: [],
+  activeGame: null,
 
   init() {
-    console.log("DuoVibe Loaded - 11 Games & Persistent Voice/Video Chat Ready");
+    console.log("DuoVibe Group Mode Ready — 3–8 Players per Room");
     this.checkOnlineStatus();
     this.bindEvents();
   },
@@ -27,34 +17,58 @@ window.App = {
   checkOnlineStatus() {
     const statusEl = document.getElementById('conn-status');
     if (!statusEl) return;
-    if (window.sb) {
-      statusEl.textContent = '• ONLINE';
-      statusEl.className = 'status-badge online';
-    } else {
-      statusEl.textContent = '• OFFLINE';
-      statusEl.className = 'status-badge offline';
-    }
+    statusEl.textContent = window.sb ? '• ONLINE' : '• OFFLINE';
+    statusEl.className = window.sb ? 'status-badge online' : 'status-badge offline';
   },
 
   bindEvents() {
-    const createBtn = document.getElementById('btn-create-room');
-    const joinBtn = document.getElementById('btn-join-room');
-    if (createBtn) createBtn.onclick = () => this.createRoom();
-    if (joinBtn) joinBtn.onclick = () => this.joinRoom();
+    document.getElementById('btn-create-room').onclick = () => this.createRoom();
+    document.getElementById('btn-join-room').onclick = () => this.joinRoom();
+  },
+
+  async createRoom() {
+    const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const { data, error } = await window.sb.from('rooms').insert([{ code: roomCode, players: [] }]);
+    if (error) return alert("Room creation failed: " + error.message);
+    this.currentRoom = roomCode;
+    this.players = [{ id: window.sb.auth.user().id, name: "You" }];
+    this.renderLobby();
+    this.setupRealtime();
+  },
+
+  async joinRoom() {
+    const roomCode = prompt("Enter 6-digit Room Code:");
+    if (!roomCode) return;
+    const { data, error } = await window.sb.from('rooms').select('*').eq('code', roomCode).single();
+    if (error || !data) return alert("Room not found or full.");
+    if (data.players.length >= MAX_PLAYERS) return alert("Room is full (max 8 players).");
+    this.currentRoom = roomCode;
+    this.players = data.players;
+    this.renderLobby();
+    this.setupRealtime();
+  },
+
+  setupRealtime() {
+    window.sb.channel('room_' + this.currentRoom)
+      .on('presence', { event: 'sync' }, () => {
+        const newState = window.sb.channel('room_' + this.currentRoom).presenceState();
+        this.players = Object.values(newState).map(p => p[0]);
+        this.renderLobby();
+      })
+      .subscribe();
   },
 
   renderLobby() {
-    const container = document.getElementById('game-grid') || document.getElementById('lobby-games');
+    const container = document.getElementById('lobby-games');
     if (!container) return;
 
     let html = 
       <div class="lobby-header-bar">
-        <h3>Choose a Game to Play Together ( + ALL_GAMES.length +  Available)</h3>
-        <div class="voice-call-quickbar">
-          <button id="quick-call-btn" onclick="window.Features && window.Features.toggleCallWidget()" class="call-action-btn">
-            🎙️ Start Voice / Video Call
-          </button>
+        <h3>Room:  + this.currentRoom +  ( + this.players.length + / + MAX_PLAYERS +  players)</h3>
+        <div class="player-list">
+           + this.players.map(p => <span class="player-badge"> + (p.name || "Guest") + </span>).join('') + 
         </div>
+        <button onclick="window.Features.toggleCallWidget()" class="call-action-btn">🎙️ Group Voice/Video Call</button>
       </div>
       <div class="games-grid-container">
     ;
@@ -78,23 +92,23 @@ window.App = {
   },
 
   launchGame(gameId) {
-    console.log("Launching game:", gameId);
+    this.activeGame = gameId;
     const gameArea = document.getElementById('active-game-area');
-    if (gameArea) {
-      gameArea.style.display = 'block';
-      gameArea.innerHTML = 
-        <div class="game-play-wrapper">
-          <div class="game-top-bar">
-            <button class="btn-back" onclick="App.renderLobby()">← Back to All 11 Games</button>
-            <button class="btn-call-mini" onclick="window.Features && window.Features.toggleCallWidget()">🎙️ Voice/Video Call</button>
-          </div>
-          <div id="game-live-content">
-            <h2> + gameId.toUpperCase() + </h2>
-            <p>Game loaded! Live choice syncing & partner presence active.</p>
-          </div>
+    if (!gameArea) return;
+
+    gameArea.style.display = 'block';
+    gameArea.innerHTML = 
+      <div class="game-play-wrapper">
+        <div class="game-top-bar">
+          <button class="btn-back" onclick="App.renderLobby()">← Back to Lobby</button>
+          <button class="btn-call-mini" onclick="window.Features.toggleCallWidget()">🎙️ Group Call</button>
         </div>
-      ;
-    }
+        <div id="game-live-content">
+          <h2> + gameId.toUpperCase() + </h2>
+          <p>Group mode active!  + this.players.length +  players in sync.</p>
+        </div>
+      </div>
+    ;
   }
 };
 
