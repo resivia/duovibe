@@ -1041,3 +1041,42 @@ body, main, .app-container {
 body, main, .app-container {
   padding-bottom: 90px !important;
 }
+
+/* --- ADVANCED MOBILE-FIRST RESPONSIVE ENGINE --- */
+@media (max-width: 768px) {
+  /* Container layout for mobile */
+  body {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Full-width responsive game grid */
+  .games-grid-container {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Card touch optimization */
+  .game-card {
+    padding: 16px !important;
+    border-radius: 16px !important;
+    touch-action: manipulation;
+  }
+
+  /* Floating call overlay responsive fit */
+  .call-overlay-floating {
+    width: calc(100vw - 32px) !important;
+    left: 16px !important;
+    right: 16px !important;
+    bottom: 85px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Native touch feedback on press */
+  button:active, .game-card:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+}
