@@ -1,4 +1,4 @@
-﻿const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, { realtime: { params: { eventsPerSecond: 10 } } });
+const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, { realtime: { params: { eventsPerSecond: 10 } } });
 
 const Sound = {
   ctx: null,
@@ -147,7 +147,7 @@ const App = {
     this.captureProfile(); if (!this.myName) { this.toast('Enter your name!', 'error'); return; }
     const code = this.genRoomCode();
     const playerData = { name: this.myName, avatar: this.myAvatar, score: 0 };
-    const { error } = await supabase.from('rooms').insert({
+    const { error } = await sb.from('rooms').insert({
       id: code, player1: playerData, player2: null, current_game: '', game_state: {}
     });
     if (error) { this.toast('Failed: ' + error.message, 'error'); return; }
@@ -159,14 +159,14 @@ const App = {
     this.captureProfile(); if (!this.myName) { this.toast('Enter your name!', 'error'); return; }
     const roomCode = (code || '').trim().toUpperCase();
     if (roomCode.length < 4) { this.toast('Invalid code!', 'error'); return; }
-    const { data: room, error } = await supabase.from('rooms').select('*').eq('id', roomCode).single();
+    const { data: room, error } = await sb.from('rooms').select('*').eq('id', roomCode).single();
     if (error || !room) { this.toast('Room not found!', 'error'); return; }
     const playerData = { name: this.myName, avatar: this.myAvatar, score: 0 };
     if (!room.player1) {
-      await supabase.from('rooms').update({ player1: playerData }).eq('id', roomCode);
+      await sb.from('rooms').update({ player1: playerData }).eq('id', roomCode);
       this.myPlayerNum = 1; this.players.p1 = playerData; this.players.p2 = room.player2;
     } else if (!room.player2) {
-      await supabase.from('rooms').update({ player2: playerData }).eq('id', roomCode);
+      await sb.from('rooms').update({ player2: playerData }).eq('id', roomCode);
       this.myPlayerNum = 2; this.players.p1 = room.player1; this.players.p2 = playerData;
     } else {
       if (room.player1.name === this.myName) { this.myPlayerNum = 1; }
@@ -182,8 +182,8 @@ const App = {
   },
 
   async subscribeToRoom(code) {
-    if (this.roomChannel) await supabase.removeChannel(this.roomChannel);
-    this.roomChannel = supabase.channel(`room:${code}`)
+    if (this.roomChannel) await sb.removeChannel(this.roomChannel);
+    this.roomChannel = sb.channel(`room:${code}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${code}` }, (payload) => { this.handleRoomUpdate(payload.new); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `room_id=eq.${code}` }, (payload) => { this.handleGameEvent(payload.new); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'love_notes', filter: `room_id=eq.${code}` }, (payload) => { this.handleLoveNote(payload.new); })
@@ -191,7 +191,7 @@ const App = {
         if (status === 'SUBSCRIBED') { this.updateConnStatus('connected'); this.toast('Connected! 💕', 'success'); }
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') { this.updateConnStatus('disconnected'); }
       });
-    const { data: notes } = await supabase.from('love_notes').select('*').eq('room_id', code).order('created_at', { ascending: false }).limit(10);
+    const { data: notes } = await sb.from('love_notes').select('*').eq('room_id', code).order('created_at', { ascending: false }).limit(10);
     this.loveNotes = notes || [];
   },
 
@@ -220,16 +220,16 @@ const App = {
   },
 
   async updateRoom(updates) {
-    const { error } = await supabase.from('rooms').update(updates).eq('id', this.roomId);
+    const { error } = await sb.from('rooms').update(updates).eq('id', this.roomId);
     if (error) console.error('Update failed:', error);
   },
 
   async sendEvent(type, payload) {
-    await supabase.from('game_events').insert({ room_id: this.roomId, event_type: type, from_player: this.myPlayerNum, payload: payload });
+    await sb.from('game_events').insert({ room_id: this.roomId, event_type: type, from_player: this.myPlayerNum, payload: payload });
   },
 
   async sendLoveNote(message, emoji = '💌') {
-    const { error } = await supabase.from('love_notes').insert({ room_id: this.roomId, from_player: this.myPlayerNum, message: message, emoji: emoji });
+    const { error } = await sb.from('love_notes').insert({ room_id: this.roomId, from_player: this.myPlayerNum, message: message, emoji: emoji });
     if (!error) this.toast('Love note sent 💌', 'success');
   },
 
@@ -421,7 +421,7 @@ const App = {
   },
 
   async goHome() {
-    if (this.roomChannel) await supabase.removeChannel(this.roomChannel);
+    if (this.roomChannel) await sb.removeChannel(this.roomChannel);
     this.roomChannel = null; this.roomId = null; this.myPlayerNum = null; this.players = { p1: null, p2: null };
     this.activeGameId = null; this.gameState = null; this.chatMessages = [];
     history.pushState({}, '', '/');
