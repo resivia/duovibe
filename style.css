@@ -993,3 +993,27 @@ body { overscroll-behavior-y: contain; }
 .call-action-btn:hover {
   background: #333;
 }
+
+/* Netlify Badge Clearance - Move all bottom-right floating UI above the Netlify badge */
+#feature-fab,
+.call-overlay-floating,
+.floating-call-btn,
+.fab-container,
+.bottom-floating-actions,
+#duo-call-overlay {
+  bottom: 80px !important;
+  right: 20px !important;
+  z-index: 99999 !important;
+}
+
+/* Ensure bottom sheet modals and bottom game buttons have extra clearance */
+.bottom-sheet-content,
+.game-bottom-bar,
+.mobile-action-bar {
+  padding-bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* Add bottom padding to main content container so footer content isn't obscured */
+body, main, .app-container {
+  padding-bottom: 90px !important;
+}
