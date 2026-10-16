@@ -1,11 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#f43f5e" />
+  <meta name="theme-color" content="#FAF9F7" />
   <title>DuoVibe 💕 Real-Time Couple Games</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="features.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💕</text></svg>" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
@@ -17,7 +18,7 @@
         <div class="nav-logo">💕</div>
         <div>
           <div class="nav-title">DuoVibe</div>
-          <div class="nav-subtitle" id="nav-subtitle">Real-Time Couple Edition</div>
+          <div class="nav-subtitle" id="nav-subtitle">Couple Edition</div>
         </div>
       </div>
       <div id="conn-status" class="conn-status disconnected">
@@ -27,15 +28,15 @@
   </header>
 
   <div id="timezone-widget" class="timezone-widget hidden">
-    <div class="tz-pair"><span class="tz-flag">🇺🇸</span><span id="tz-usa">--:--</span></div>
-    <div class="tz-divider">💕</div>
-    <div class="tz-pair"><span class="tz-flag">🇳🇬</span><span id="tz-nigeria">--:--</span></div>
+    <div class="tz-pair"><span>🇺🇸</span><span id="tz-usa">--:--</span></div>
+    <div class="tz-divider">·</div>
+    <div class="tz-pair"><span>🇳🇬</span><span id="tz-nigeria">--:--</span></div>
   </div>
 
   <main class="main-container" id="main-content">
     <div class="loading-screen">
       <div class="waiting-spinner"></div>
-      <p class="text-xs text-slate-400 mt-2">Loading DuoVibe...</p>
+      <p class="text-sm" style="color:var(--text-tertiary);">Loading DuoVibe...</p>
     </div>
   </main>
 
@@ -44,5 +45,20 @@
 
   <script src="config.js"></script>
   <script src="app.js"></script>
+  <script src="features.js"></script>
+  <script>
+    const fadeObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    const domObserver = new MutationObserver(() => {
+      document.querySelectorAll('.fade-in:not(.visible)').forEach(el => {
+        fadeObserver.observe(el);
+      });
+    });
+    domObserver.observe(document.getElementById('main-content'), { childList: true, subtree: true });
+  </script>
 </body>
 </html>
