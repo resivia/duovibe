@@ -98,11 +98,25 @@ const App = {
   roomId: null, myPlayerNum: null, myName: '', myAvatar: '', players: { p1: null, p2: null },
   activeGameId: null, gameState: null, roomChannel: null, chatMessages: [], loveNotes: [],
 
-  async init() {
+    async init() {
     this.loadProfile(); this.startTimezoneClock(); this.updateDaysTogether();
+    this.checkOnlineStatus();
     const params = new URLSearchParams(location.search);
     const urlRoom = params.get('room');
     if (urlRoom) { this.renderLobby(urlRoom.toUpperCase()); } else { this.renderLobby(); }
+  },
+
+  async checkOnlineStatus() {
+    try {
+      const { data, error } = await sb.from('rooms').select('id').limit(1);
+      if (!error) {
+        this.updateConnStatus('online');
+      } else {
+        this.updateConnStatus('disconnected');
+      }
+    } catch(e) {
+      this.updateConnStatus('disconnected');
+    }
   },
 
   loadProfile() {
@@ -630,10 +644,12 @@ const App = {
     c.scrollTop = c.scrollHeight;
   },
 
-  updateConnStatus(status) {
-    const el = document.getElementById('conn-status'); if (!el) return;
-    el.className = 'conn-status ' + status;
-    el.innerHTML = `<span class="conn-dot"></span> ${status === 'connected' ? 'Live' : status === 'waiting' ? 'Waiting' : 'Offline'}`;
+    updateConnStatus(status) {
+    const el = document.getElementById('conn-status');
+    if (!el) return;
+    el.className = 'conn-status ' + (status === 'disconnected' ? 'disconnected' : 'connected');
+    const label = status === 'connected' ? 'Live' : status === 'online' ? 'Online' : status === 'waiting' ? 'Waiting' : 'Offline';
+    el.innerHTML = `<span class="conn-dot"></span> ${label}`;
   },
 
   showFloatingEmoji(emoji) {
