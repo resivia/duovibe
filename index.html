@@ -1,0 +1,48 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#f43f5e" />
+  <title>DuoVibe 💕 Real-Time Couple Games</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💕</text></svg>" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <header class="nav-bar">
+    <div class="nav-inner">
+      <div class="nav-brand" onclick="App.goHome()">
+        <div class="nav-logo">💕</div>
+        <div>
+          <div class="nav-title">DuoVibe</div>
+          <div class="nav-subtitle" id="nav-subtitle">Real-Time Couple Edition</div>
+        </div>
+      </div>
+      <div id="conn-status" class="conn-status disconnected">
+        <span class="conn-dot"></span> Offline
+      </div>
+    </div>
+  </header>
+
+  <div id="timezone-widget" class="timezone-widget hidden">
+    <div class="tz-pair"><span class="tz-flag">🇺🇸</span><span id="tz-usa">--:--</span></div>
+    <div class="tz-divider">💕</div>
+    <div class="tz-pair"><span class="tz-flag">🇳🇬</span><span id="tz-nigeria">--:--</span></div>
+  </div>
+
+  <main class="main-container" id="main-content">
+    <div class="loading-screen">
+      <div class="waiting-spinner"></div>
+      <p class="text-xs text-slate-400 mt-2">Loading DuoVibe...</p>
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+  <div id="floating-emojis"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
