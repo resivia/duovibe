@@ -1,15 +1,21 @@
-// DuoVibe Real-Time Multiplayer Engine - 11 Games & Voice Call
+// DuoVibe Engine - Direct Supabase Realtime Connection
 
-const SUPABASE_URL = (window.CONFIG && window.CONFIG.SUPABASE_URL) ? window.CONFIG.SUPABASE_URL : 'https://euqrzxxldlsbhuyjuleo.supabase.co';
-const SUPABASE_ANON_KEY = (window.CONFIG && window.CONFIG.SUPABASE_ANON_KEY) ? window.CONFIG.SUPABASE_ANON_KEY : '';
+const SUPABASE_URL = 'https://euqrzxxldlsbhuyjuleo.supabase.co';
+const SUPABASE_ANON_KEY = (window.CONFIG && window.CONFIG.SUPABASE_ANON_KEY) ? window.CONFIG.SUPABASE_ANON_KEY : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1cXJ6eHhsZGxzYmh1eWp1bGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk4NTYwMDAsImV4cCI6MjAyNTQzMjAwMH0.placeholder';
 
-if (window.supabase && !window.sb) {
-  try {
-    window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  } catch (e) {
-    console.error("Supabase init error:", e);
+function initSupabase() {
+  if (window.supabase && !window.sb) {
+    try {
+      const key = (window.CONFIG && window.CONFIG.SUPABASE_ANON_KEY) ? window.CONFIG.SUPABASE_ANON_KEY : SUPABASE_ANON_KEY;
+      window.sb = window.supabase.createClient(SUPABASE_URL, key);
+      console.log("Supabase Client Initialized Successfully!");
+    } catch (e) {
+      console.error("Supabase Client Init Error:", e);
+    }
   }
 }
+
+initSupabase();
 
 const ALL_GAMES = [
   { id: 'blind-rank', num: 1, title: 'Blind Ranking', emoji: '🔟', tag: 'TikTok Trend', desc: 'Rank 5 mystery items 1-5 without knowing what comes next!' },
@@ -35,12 +41,12 @@ window.App = {
   channel: null,
 
   init() {
+    initSupabase();
     localStorage.setItem('duo_my_id', this.myId);
     if (!this.myName) {
       this.myName = 'Player ' + Math.floor(Math.random() * 90 + 10);
       localStorage.setItem('duo_my_name', this.myName);
     }
-    console.log("DuoVibe Loaded - User:", this.myName);
     this.checkOnlineStatus();
     this.renderHome();
   },
@@ -51,7 +57,7 @@ window.App = {
     if (this.currentRoom) {
       statusEl.textContent = '• LIVE - Room ' + this.currentRoom;
       statusEl.className = 'status-badge live';
-    } else if (window.sb) {
+    } else if (window.sb || window.supabase) {
       statusEl.textContent = '• ONLINE';
       statusEl.className = 'status-badge online';
     } else {
@@ -80,7 +86,7 @@ window.App = {
           <button class="btn-primary" onclick="App.createRoom()">✨ Create New Room</button>
           
           <div class="join-row">
-            <input type="text" id="room-code-input" class="game-input" placeholder="6-Digit Room Code" style="text-transform:uppercase" />
+            <input type="text" id="room-code-input" class="game-input" placeholder="6-DIGIT ROOM CODE" style="text-transform:uppercase" />
             <button class="btn-secondary" onclick="App.joinRoomFromInput()">Join Room</button>
           </div>
         </div>
@@ -114,6 +120,7 @@ window.App = {
     this.currentRoom = code;
     this.checkOnlineStatus();
 
+    initSupabase();
     if (window.sb) {
       if (this.channel) this.channel.unsubscribe();
       this.channel = window.sb.channel('room_' + code, {
@@ -143,8 +150,6 @@ window.App = {
             await this.channel.track({ id: this.myId, name: this.myName, onlineAt: new Date().toISOString() });
           }
         });
-    } else {
-      this.players = [{ id: this.myId, name: this.myName }];
     }
 
     this.renderLobby();
@@ -224,41 +229,18 @@ window.App = {
     let contentHTML = '';
 
     switch (this.activeGame) {
-      case 'would-rather':
-        contentHTML = this.renderWouldRather();
-        break;
-      case 'this-or-that':
-        contentHTML = this.renderThisOrThat();
-        break;
-      case 'truths-lie':
-        contentHTML = this.renderTruthsLie();
-        break;
-      case 'red-green-flag':
-        contentHTML = this.renderRedGreenFlag();
-        break;
-      case 'blind-rank':
-        contentHTML = this.renderBlindRank();
-        break;
-      case 'couple-compat':
-        contentHTML = this.renderCompatQuiz();
-        break;
-      case 'guess-age':
-        contentHTML = this.renderGuessAge();
-        break;
-      case 'guess-number':
-        contentHTML = this.renderGuessNumber();
-        break;
-      case 'guess-celeb':
-        contentHTML = this.renderGuessCeleb();
-        break;
-      case 'categories-bomb':
-        contentHTML = this.renderBomb();
-        break;
-      case 'word-letters':
-        contentHTML = this.renderWordLetters();
-        break;
-      default:
-        contentHTML = `<p>Game active! Play together live.</p>`;
+      case 'would-rather': contentHTML = this.renderWouldRather(); break;
+      case 'this-or-that': contentHTML = this.renderThisOrThat(); break;
+      case 'truths-lie': contentHTML = this.renderTruthsLie(); break;
+      case 'red-green-flag': contentHTML = this.renderRedGreenFlag(); break;
+      case 'blind-rank': contentHTML = this.renderBlindRank(); break;
+      case 'couple-compat': contentHTML = this.renderCompatQuiz(); break;
+      case 'guess-age': contentHTML = this.renderGuessAge(); break;
+      case 'guess-number': contentHTML = this.renderGuessNumber(); break;
+      case 'guess-celeb': contentHTML = this.renderGuessCeleb(); break;
+      case 'categories-bomb': contentHTML = this.renderBomb(); break;
+      case 'word-letters': contentHTML = this.renderWordLetters(); break;
+      default: contentHTML = `<p>Game active! Play together live.</p>`;
     }
 
     main.innerHTML = `
@@ -414,7 +396,6 @@ window.App = {
   },
 
   renderGuessAge() {
-    const myChoice = this.gameState.choices ? this.gameState.choices[this.myId] : null;
     return `
       <div class="dilemma-card">
         <h3>Guess The Number / Year</h3>

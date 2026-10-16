@@ -86,7 +86,7 @@ h1, h2, h3, h4, .font-heading {
   color: var(--accent);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Fade-in Animation Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Fade-in Animation ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .fade-in {
   opacity: 0;
   transform: translateY(12px);
@@ -98,7 +98,7 @@ h1, h2, h3, h4, .font-heading {
   transform: translateY(0);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Navigation (Sticky Top) Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Navigation (Sticky Top) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .nav-bar {
   position: sticky;
   top: 0;
@@ -164,7 +164,7 @@ h1, h2, h3, h4, .font-heading {
   margin-top: 2px;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Connection Status Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Connection Status ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .conn-status {
   display: flex;
   align-items: center;
@@ -194,7 +194,7 @@ h1, h2, h3, h4, .font-heading {
 .conn-status.disconnected .conn-dot { background: #DC2626; }
 .conn-status.waiting .conn-dot { background: var(--amber); animation: pulse 2s infinite; }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Timezone Widget Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Timezone Widget ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .timezone-widget {
   max-width: 480px;
   margin: 0 auto;
@@ -211,7 +211,7 @@ h1, h2, h3, h4, .font-heading {
 .tz-pair { display: flex; align-items: center; gap: 5px; }
 .tz-divider { color: var(--text-tertiary); font-size: 10px; }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Main Container Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Main Container ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .main-container {
   max-width: 480px;
   margin: 0 auto;
@@ -230,7 +230,7 @@ h1, h2, h3, h4, .font-heading {
   min-height: 60vh;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Cards Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Cards ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -257,7 +257,7 @@ h1, h2, h3, h4, .font-heading {
   border-color: var(--accent);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Buttons (Mobile-Optimized Touch Targets) Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Buttons (Mobile-Optimized Touch Targets) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -343,7 +343,7 @@ h1, h2, h3, h4, .font-heading {
   border-radius: var(--radius-lg);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Inputs (iOS no-zoom) Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Inputs (iOS no-zoom) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .input {
   width: 100%;
   padding: 14px 16px;
@@ -389,7 +389,7 @@ h1, h2, h3, h4, .font-heading {
   text-transform: uppercase;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Tags Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Tags ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .tag {
   display: inline-flex;
   align-items: center;
@@ -406,7 +406,7 @@ h1, h2, h3, h4, .font-heading {
 .tag-purple { background: var(--purple-soft); color: var(--purple); }
 .tag-green { background: var(--green-soft); color: #16A34A; }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Games Grid Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Games Grid ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .games-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -467,7 +467,7 @@ h1, h2, h3, h4, .font-heading {
   color: white;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Room Code Display Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Room Code Display ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .room-code-display {
   font-family: 'Outfit', sans-serif;
   font-weight: 900;
@@ -483,7 +483,7 @@ h1, h2, h3, h4, .font-heading {
   word-break: break-all;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Game Header Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Game Header ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .game-header {
   display: flex;
   align-items: center;
@@ -496,7 +496,7 @@ h1, h2, h3, h4, .font-heading {
   gap: 8px;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Accent Boxes Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Accent Boxes ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .gradient-box {
   background: var(--accent);
   border-radius: var(--radius-lg);
@@ -515,7 +515,7 @@ h1, h2, h3, h4, .font-heading {
   box-shadow: var(--shadow-lg);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Score Bar Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Score Bar ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .score-bar {
   display: flex;
   align-items: center;
@@ -552,7 +552,7 @@ h1, h2, h3, h4, .font-heading {
   text-overflow: ellipsis;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Option Cards Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Option Cards ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .option-card {
   padding: 16px;
   border-radius: var(--radius-md);
@@ -586,7 +586,7 @@ h1, h2, h3, h4, .font-heading {
 .option-card.correct { border-color: var(--green); background: var(--green-soft); }
 .option-card.wrong { border-color: #DC2626; background: var(--red-soft); }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Flag Buttons Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Flag Buttons ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .flag-btn {
   padding: 14px 8px;
   border-radius: var(--radius-md);
@@ -612,7 +612,7 @@ h1, h2, h3, h4, .font-heading {
 
 .flag-btn.selected { box-shadow: 0 0 0 3px currentColor; }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Results Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Results ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .result-match {
   background: var(--green-soft);
   border: 1.5px solid #A7F3D0;
@@ -637,7 +637,7 @@ h1, h2, h3, h4, .font-heading {
   animation: slideUp 0.4s ease;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Spinner Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Spinner ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .waiting-spinner {
   width: 32px;
   height: 32px;
@@ -647,7 +647,7 @@ h1, h2, h3, h4, .font-heading {
   animation: spin 0.8s linear infinite;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Rank Slots Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Rank Slots ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .rank-slot { display: flex; align-items: center; gap: 10px; }
 
 .rank-num {
@@ -666,7 +666,7 @@ h1, h2, h3, h4, .font-heading {
 .rank-num.filled { background: var(--text-primary); color: var(--text-inverse); }
 .rank-num.empty { background: var(--bg-hover); color: var(--text-tertiary); border: 1.5px solid var(--border); }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Emoji Bar (Larger touch targets on mobile) Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Emoji Bar (Larger touch targets on mobile) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .emoji-bar {
   display: flex;
   gap: 6px;
@@ -694,7 +694,7 @@ h1, h2, h3, h4, .font-heading {
   border-color: var(--accent);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Chat Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Chat ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .chat-container {
   max-height: 180px;
   overflow-y: auto;
@@ -726,7 +726,7 @@ h1, h2, h3, h4, .font-heading {
 .chat-bubble.p1 { background: var(--accent-soft); color: var(--accent); border-bottom-left-radius: 4px; }
 .chat-bubble.p2 { background: var(--purple-soft); color: var(--purple); border-bottom-right-radius: 4px; }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Love Notes Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Love Notes ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .love-note {
   background: var(--bg);
   border: 1px solid var(--border-light);
@@ -752,7 +752,7 @@ h1, h2, h3, h4, .font-heading {
   line-height: 1.5;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Toasts Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Toasts ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 #toast-container {
   position: fixed;
   top: calc(70px + var(--safe-top));
@@ -784,7 +784,7 @@ h1, h2, h3, h4, .font-heading {
 .toast.error { background: rgba(254,242,242,0.95); color: #DC2626; border-color: #FECACA; }
 .toast.info { background: rgba(255,255,255,0.95); color: var(--text-primary); border-color: var(--border); }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Floating Emojis Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Floating Emojis ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 #floating-emojis {
   position: fixed;
   inset: 0;
@@ -799,7 +799,7 @@ h1, h2, h3, h4, .font-heading {
   animation: floatUp 2.5s ease-out forwards;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Progress Bar Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Progress Bar ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .progress-bar {
   height: 6px;
   background: var(--border-light);
@@ -814,14 +814,14 @@ h1, h2, h3, h4, .font-heading {
   transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Divider Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Divider ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .divider {
   height: 1px;
   background: var(--border-light);
   margin: 8px 0;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Animations Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Animations ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
@@ -847,7 +847,7 @@ h1, h2, h3, h4, .font-heading {
 
 .animate-bomb { animation: bombPulse 0.5s infinite; }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Utilities Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Utilities ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 .hidden { display: none !important; }
 .text-center { text-align: center; }
 .text-xs { font-size: 11px; }
@@ -890,7 +890,7 @@ h1, h2, h3, h4, .font-heading {
 .text-slate-400 { color: var(--text-tertiary); }
 .text-white { color: var(--text-inverse); }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Range Slider Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Range Slider ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 input[type="range"] {
   -webkit-appearance: none;
   width: 100%;
@@ -920,20 +920,20 @@ input[type="range"]::-moz-range-thumb {
   border: none;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Scrollbar (Hidden on mobile) Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Scrollbar (Hidden on mobile) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 ::-webkit-scrollbar { width: 0px; height: 0px; }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ iOS-specific fixes Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ iOS-specific fixes ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 input, textarea, select, button {
   font-size: 16px !important;
   -webkit-appearance: none;
   appearance: none;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Prevent pull-to-refresh conflict Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Prevent pull-to-refresh conflict ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 body { overscroll-behavior-y: contain; }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Larger screens: Add some hover polish Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Larger screens: Add some hover polish ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 @media (hover: hover) and (min-width: 768px) {
   .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
   .btn-secondary:hover { background: #333; transform: translateY(-1px); }
@@ -944,7 +944,7 @@ body { overscroll-behavior-y: contain; }
   input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Small Screens (iPhone SE etc.) Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Small Screens (iPhone SE etc.) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 @media (max-width: 374px) {
   .nav-title { font-size: 15px; }
   .nav-subtitle { font-size: 9px; }
@@ -955,7 +955,7 @@ body { overscroll-behavior-y: contain; }
   .main-container { padding: 10px 12px; }
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Landscape mobile Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Landscape mobile ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 @media (orientation: landscape) and (max-height: 500px) {
   .nav-bar { height: 48px; }
   .main-container { padding-top: 8px; padding-bottom: 70px; }
@@ -1442,4 +1442,17 @@ body, main, .app-container {
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.status-badge.online {
+  background: #E6F4EA !important;
+  color: #137333 !important;
+  border: 1px solid #CEEAD6 !important;
+}
+
+.status-badge.live {
+  background: #E8F0FE !important;
+  color: #1A73E8 !important;
+  border: 1px solid #D2E3FC !important;
+  font-weight: 700 !important;
 }
