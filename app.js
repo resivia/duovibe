@@ -1,4 +1,4 @@
-// DuoVibe Real-Time Multiplayer App - 11 Games & Voice/Video Call
+// DuoVibe Real-Time Multiplayer Engine - 11 Games & Voice Call
 
 const SUPABASE_URL = (window.CONFIG && window.CONFIG.SUPABASE_URL) ? window.CONFIG.SUPABASE_URL : 'https://euqrzxxldlsbhuyjuleo.supabase.co';
 const SUPABASE_ANON_KEY = (window.CONFIG && window.CONFIG.SUPABASE_ANON_KEY) ? window.CONFIG.SUPABASE_ANON_KEY : '';
@@ -28,7 +28,7 @@ const ALL_GAMES = [
 window.App = {
   currentRoom: null,
   myId: localStorage.getItem('duo_my_id') || 'user_' + Math.random().toString(36).substring(2, 7),
-  myName: localStorage.getItem('duo_my_name') || 'Player ' + Math.floor(Math.random() * 90 + 10),
+  myName: localStorage.getItem('duo_my_name') || '',
   players: [],
   activeGame: null,
   gameState: {},
@@ -36,11 +36,13 @@ window.App = {
 
   init() {
     localStorage.setItem('duo_my_id', this.myId);
-    localStorage.setItem('duo_my_name', this.myName);
-    console.log("DuoVibe Initialized - User:", this.myName);
+    if (!this.myName) {
+      this.myName = 'Player ' + Math.floor(Math.random() * 90 + 10);
+      localStorage.setItem('duo_my_name', this.myName);
+    }
+    console.log("DuoVibe Loaded - User:", this.myName);
     this.checkOnlineStatus();
-    this.bindEvents();
-    this.renderLobby();
+    this.renderHome();
   },
 
   checkOnlineStatus() {
@@ -58,11 +60,39 @@ window.App = {
     }
   },
 
-  bindEvents() {
-    const createBtn = document.getElementById('btn-create-room');
-    const joinBtn = document.getElementById('btn-join-room');
-    if (createBtn) createBtn.onclick = () => this.createRoom();
-    if (joinBtn) joinBtn.onclick = () => this.joinRoom();
+  renderHome() {
+    this.currentRoom = null;
+    this.checkOnlineStatus();
+    const main = document.getElementById('main-content');
+    if (!main) return;
+
+    main.innerHTML = `
+      <div class="home-card">
+        <h2>Welcome to DuoVibe 💕</h2>
+        <p class="subtitle">Play 11 real-time games with your long-distance partner</p>
+        
+        <div class="input-group">
+          <label>Your Name:</label>
+          <input type="text" id="user-name-input" value="${this.myName}" class="game-input" placeholder="Enter your name" onchange="App.updateName(this.value)" />
+        </div>
+
+        <div class="action-buttons-stack">
+          <button class="btn-primary" onclick="App.createRoom()">✨ Create New Room</button>
+          
+          <div class="join-row">
+            <input type="text" id="room-code-input" class="game-input" placeholder="6-Digit Room Code" style="text-transform:uppercase" />
+            <button class="btn-secondary" onclick="App.joinRoomFromInput()">Join Room</button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  updateName(val) {
+    if (val.trim()) {
+      this.myName = val.trim();
+      localStorage.setItem('duo_my_name', this.myName);
+    }
   },
 
   createRoom() {
@@ -70,21 +100,20 @@ window.App = {
     this.joinRoomWithCode(code);
   },
 
-  joinRoom() {
-    const input = document.getElementById('room-input');
-    let code = input ? input.value.trim().toUpperCase() : null;
+  joinRoomFromInput() {
+    const input = document.getElementById('room-code-input');
+    const code = input ? input.value.trim().toUpperCase() : '';
     if (!code) {
-      code = prompt("Enter 6-digit Room Code:");
+      alert("Please enter a valid 6-digit room code.");
+      return;
     }
-    if (code) {
-      this.joinRoomWithCode(code);
-    }
+    this.joinRoomWithCode(code);
   },
 
   joinRoomWithCode(code) {
     this.currentRoom = code;
     this.checkOnlineStatus();
-    
+
     if (window.sb) {
       if (this.channel) this.channel.unsubscribe();
       this.channel = window.sb.channel('room_' + code, {
@@ -96,13 +125,16 @@ window.App = {
           const state = this.channel.presenceState();
           this.players = Object.keys(state).map(key => {
             const pres = state[key][0];
-            return pres || { id: key, name: 'Player' };
+            return pres || { id: key, name: 'Partner' };
           });
           this.updatePlayerListUI();
         })
         .on('broadcast', { event: 'game_update' }, (payload) => {
           if (payload && payload.payload) {
             this.gameState = payload.payload;
+            if (this.gameState.gameId && this.activeGame !== this.gameState.gameId) {
+              this.activeGame = this.gameState.gameId;
+            }
             this.renderActiveGame();
           }
         })
@@ -115,24 +147,7 @@ window.App = {
       this.players = [{ id: this.myId, name: this.myName }];
     }
 
-    const homeView = document.getElementById('home-setup');
-    const roomView = document.getElementById('room-view');
-    if (homeView) homeView.style.display = 'none';
-    if (roomView) roomView.style.display = 'block';
-
     this.renderLobby();
-  },
-
-  broadcastState(newState) {
-    this.gameState = { ...this.gameState, ...newState };
-    if (this.channel) {
-      this.channel.send({
-        type: 'broadcast',
-        event: 'game_update',
-        payload: this.gameState
-      });
-    }
-    this.renderActiveGame();
   },
 
   updatePlayerListUI() {
@@ -146,18 +161,14 @@ window.App = {
 
   renderLobby() {
     this.activeGame = null;
-    const gameArea = document.getElementById('active-game-area');
-    if (gameArea) gameArea.style.display = 'none';
-
-    let container = document.getElementById('lobby-games') || document.getElementById('game-grid');
-    if (!container) return;
-    container.style.display = 'block';
+    const main = document.getElementById('main-content');
+    if (!main) return;
 
     let html = `
       <div class="lobby-header-bar">
         <div class="lobby-title-row">
           <h3>🎮 Select a Game (${ALL_GAMES.length} Available)</h3>
-          ${this.currentRoom ? `<span class="room-tag">Room Code: <strong>${this.currentRoom}</strong></span>` : ''}
+          <span class="room-tag">Room Code: <strong>${this.currentRoom}</strong></span>
         </div>
         <div id="connected-players-bar" class="players-bar">
           <span class="player-badge me">👤 ${this.myName} (You)</span>
@@ -184,25 +195,30 @@ window.App = {
     });
 
     html += `</div>`;
-    container.innerHTML = html;
+    main.innerHTML = html;
   },
 
   launchGame(gameId) {
     this.activeGame = gameId;
-    this.gameState = { gameId, choices: {}, turn: 0, scores: {} };
-    const lobbyEl = document.getElementById('lobby-games') || document.getElementById('game-grid');
-    if (lobbyEl) lobbyEl.style.display = 'none';
+    this.gameState = { gameId, choices: {}, turn: 0 };
+    this.broadcastState(this.gameState);
+    this.renderActiveGame();
+  },
 
-    const gameArea = document.getElementById('active-game-area');
-    if (gameArea) {
-      gameArea.style.display = 'block';
-      this.renderActiveGame();
+  broadcastState(newState) {
+    this.gameState = { ...this.gameState, ...newState };
+    if (this.channel) {
+      this.channel.send({
+        type: 'broadcast',
+        event: 'game_update',
+        payload: this.gameState
+      });
     }
   },
 
   renderActiveGame() {
-    const gameArea = document.getElementById('active-game-area');
-    if (!gameArea || !this.activeGame) return;
+    const main = document.getElementById('main-content');
+    if (!main || !this.activeGame) return;
 
     const gameInfo = ALL_GAMES.find(g => g.id === this.activeGame) || { title: this.activeGame, emoji: '🎮' };
     let contentHTML = '';
@@ -242,10 +258,10 @@ window.App = {
         contentHTML = this.renderWordLetters();
         break;
       default:
-        contentHTML = `<p>Game loaded! Play together in real time.</p>`;
+        contentHTML = `<p>Game active! Play together live.</p>`;
     }
 
-    gameArea.innerHTML = `
+    main.innerHTML = `
       <div class="game-play-wrapper">
         <div class="game-top-bar">
           <button class="btn-back" onclick="App.renderLobby()">← Back to All Games</button>
@@ -262,8 +278,9 @@ window.App = {
   },
 
   submitChoice(choice) {
-    const newChoices = { ...this.gameState.choices, [this.myId]: choice };
+    const newChoices = { ...(this.gameState.choices || {}), [this.myId]: choice };
     this.broadcastState({ choices: newChoices });
+    this.renderActiveGame();
     if (window.confetti && Object.keys(newChoices).length > 1) {
       window.confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
     }
@@ -283,11 +300,11 @@ window.App = {
         <h3>Would You Rather...</h3>
         <div class="choice-buttons">
           <button class="btn-choice ${myChoice === 'A' ? 'selected' : ''}" onclick="App.submitChoice('A')">${cur.a}</button>
-          <div class="or-divider">OR</div>
+          <div style="text-align:center; font-weight:700; color:#888;">OR</div>
           <button class="btn-choice ${myChoice === 'B' ? 'selected' : ''}" onclick="App.submitChoice('B')">${cur.b}</button>
         </div>
         ${this.renderChoiceComparison()}
-        <button class="btn-next-round" onclick="App.broadcastState({ turn: (App.gameState.turn||0)+1, choices: {} })">Next Dilemma →</button>
+        <button class="btn-action" style="margin-top:12px;" onclick="App.broadcastState({ turn: (App.gameState.turn||0)+1, choices: {} }); App.renderActiveGame();">Next Dilemma →</button>
       </div>
     `;
   },
@@ -309,7 +326,7 @@ window.App = {
           <button class="btn-choice ${myChoice === 'B' ? 'selected' : ''}" onclick="App.submitChoice('B')">${cur.b}</button>
         </div>
         ${this.renderChoiceComparison()}
-        <button class="btn-next-round" onclick="App.broadcastState({ turn: (App.gameState.turn||0)+1, choices: {} })">Next Pair →</button>
+        <button class="btn-action" style="margin-top:12px;" onclick="App.broadcastState({ turn: (App.gameState.turn||0)+1, choices: {} }); App.renderActiveGame();">Next Pair →</button>
       </div>
     `;
   },
@@ -326,14 +343,14 @@ window.App = {
     return `
       <div class="dilemma-card">
         <h3>Red, Green, or Beige Flag?</h3>
-        <div class="scenario-box">"${cur}"</div>
-        <div class="choice-buttons flag-buttons">
-          <button class="btn-flag red ${myChoice === 'RED' ? 'selected' : ''}" onclick="App.submitChoice('RED')">🚩 Red Flag</button>
-          <button class="btn-flag beige ${myChoice === 'BEIGE' ? 'selected' : ''}" onclick="App.submitChoice('BEIGE')">🟨 Beige Flag</button>
-          <button class="btn-flag green ${myChoice === 'GREEN' ? 'selected' : ''}" onclick="App.submitChoice('GREEN')">🟩 Green Flag</button>
+        <div style="background:#FAF9F7; border:1px solid #E8E6E3; padding:16px; border-radius:12px; font-weight:600; font-size:16px; text-align:center;">"${cur}"</div>
+        <div class="choice-buttons" style="flex-direction:row; gap:8px;">
+          <button class="btn-choice ${myChoice === 'RED' ? 'selected' : ''}" style="flex:1" onclick="App.submitChoice('RED')">🚩 Red</button>
+          <button class="btn-choice ${myChoice === 'BEIGE' ? 'selected' : ''}" style="flex:1" onclick="App.submitChoice('BEIGE')">🟨 Beige</button>
+          <button class="btn-choice ${myChoice === 'GREEN' ? 'selected' : ''}" style="flex:1" onclick="App.submitChoice('GREEN')">🟩 Green</button>
         </div>
         ${this.renderChoiceComparison()}
-        <button class="btn-next-round" onclick="App.broadcastState({ turn: (App.gameState.turn||0)+1, choices: {} })">Next Scenario →</button>
+        <button class="btn-action" style="margin-top:12px;" onclick="App.broadcastState({ turn: (App.gameState.turn||0)+1, choices: {} }); App.renderActiveGame();">Next Scenario →</button>
       </div>
     `;
   },
@@ -344,13 +361,13 @@ window.App = {
       <div class="dilemma-card">
         <h3>2 Truths & 1 Lie</h3>
         <p>Type 3 statements below (2 true, 1 lie), then let your partner guess!</p>
-        <div class="input-stack">
-          <input type="text" id="statement-1" placeholder="Statement 1..." class="game-input" />
-          <input type="text" id="statement-2" placeholder="Statement 2..." class="game-input" />
-          <input type="text" id="statement-3" placeholder="Statement 3 (The Lie)..." class="game-input" />
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <input type="text" id="st-1" placeholder="Statement 1..." class="game-input" />
+          <input type="text" id="st-2" placeholder="Statement 2..." class="game-input" />
+          <input type="text" id="st-3" placeholder="Statement 3 (The Lie)..." class="game-input" />
         </div>
-        <button class="btn-action" onclick="App.submitChoice('Submitted statements')">Lock Statements</button>
-        ${myChoice ? `<p class="status-msg">✅ Statements sent to partner!</p>` : ''}
+        <button class="btn-action" onclick="App.submitChoice('Submitted 3 Statements')">Lock Statements</button>
+        ${myChoice ? `<p style="color:#137333; font-weight:600;">✅ Statements sent to partner!</p>` : ''}
       </div>
     `;
   },
@@ -363,22 +380,20 @@ window.App = {
       <div class="dilemma-card">
         <h3>Blind Ranking</h3>
         <p>Rank these mystery experiences 1 to 5!</p>
-        <div class="rank-list">
-          ${items.map((item, i) => `
-            <div class="rank-item" style="display:flex; justify-content:space-between; margin-bottom:8px;">
-              <span>${item}</span>
-              <select onchange="App.submitChoice(this.value)" class="rank-select">
-                <option value="">Select Rank</option>
-                <option value="1">#1 Top</option>
-                <option value="2">#2</option>
-                <option value="3">#3</option>
-                <option value="4">#4</option>
-                <option value="5">#5</option>
-              </select>
-            </div>
-          `).join('')}
-        </div>
-        ${myChoice ? `<p class="status-msg">Locked rank #${myChoice}</p>` : ''}
+        ${items.map(item => `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#FAF9F7; padding:10px 14px; border-radius:10px; border:1px solid #E8E6E3;">
+            <span>${item}</span>
+            <select onchange="App.submitChoice(this.value)" class="game-input" style="width:auto; padding:6px;">
+              <option value="">Rank</option>
+              <option value="1">#1 Top</option>
+              <option value="2">#2</option>
+              <option value="3">#3</option>
+              <option value="4">#4</option>
+              <option value="5">#5</option>
+            </select>
+          </div>
+        `).join('')}
+        ${myChoice ? `<p style="color:#137333; font-weight:600;">Selected Rank: #${myChoice}</p>` : ''}
       </div>
     `;
   },
@@ -388,7 +403,7 @@ window.App = {
     return `
       <div class="dilemma-card">
         <h3>Compatibility Quiz</h3>
-        <p>Who is more likely to buy impulse snacks?</p>
+        <p>Who is more likely to buy impulse snacks on late nights?</p>
         <div class="choice-buttons">
           <button class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')">🙋‍♂️ Definitely Me</button>
           <button class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')">🙋‍♀️ Definitely Partner</button>
@@ -399,15 +414,13 @@ window.App = {
   },
 
   renderGuessAge() {
-    const subjects = [{ name: "iPhone 1 Release Year", answer: "2007" }];
-    const cur = subjects[0];
-
+    const myChoice = this.gameState.choices ? this.gameState.choices[this.myId] : null;
     return `
       <div class="dilemma-card">
         <h3>Guess The Number / Year</h3>
-        <div class="scenario-box">"${cur.name}"</div>
-        <input type="number" id="age-guess-val" placeholder="Enter your guess..." class="game-input" />
-        <button class="btn-action" onclick="App.submitChoice(document.getElementById('age-guess-val').value)">Submit Guess</button>
+        <div style="background:#FAF9F7; border:1px solid #E8E6E3; padding:16px; border-radius:12px; font-weight:600; text-align:center;">"Year iPhone 1 was released"</div>
+        <input type="number" id="age-input" placeholder="Enter year..." class="game-input" />
+        <button class="btn-action" onclick="App.submitChoice(document.getElementById('age-input').value)">Submit Guess</button>
         ${this.renderChoiceComparison()}
       </div>
     `;
@@ -418,9 +431,9 @@ window.App = {
     return `
       <div class="dilemma-card">
         <h3>Guess Secret Number (1-100)</h3>
-        <input type="number" id="num-guess-input" placeholder="Enter 1-100..." class="game-input" />
-        <button class="btn-action" onclick="App.submitChoice(document.getElementById('num-guess-input').value)">Guess</button>
-        ${myChoice ? `<p class="status-msg">Your guess: ${myChoice}</p>` : ''}
+        <input type="number" id="num-input" placeholder="Enter 1-100..." class="game-input" />
+        <button class="btn-action" onclick="App.submitChoice(document.getElementById('num-input').value)">Submit Guess</button>
+        ${myChoice ? `<p style="font-weight:600;">Your guess: ${myChoice}</p>` : ''}
       </div>
     `;
   },
@@ -429,9 +442,9 @@ window.App = {
     return `
       <div class="dilemma-card">
         <h3>Guess The Celebrity</h3>
-        <p>Clue #1: Grammy-winning pop star born in Texas.</p>
-        <input type="text" id="celeb-guess-input" placeholder="Type name..." class="game-input" />
-        <button class="btn-action" onclick="App.submitChoice(document.getElementById('celeb-guess-input').value)">Submit Answer</button>
+        <p>Clue #1: Grammy-winning pop star born in Houston, Texas.</p>
+        <input type="text" id="celeb-input" placeholder="Type answer..." class="game-input" />
+        <button class="btn-action" onclick="App.submitChoice(document.getElementById('celeb-input').value)">Submit Guess</button>
       </div>
     `;
   },
@@ -440,9 +453,9 @@ window.App = {
     return `
       <div class="dilemma-card">
         <h3>💣 Pass The Bomb</h3>
-        <p>Category: <strong>Things found in a kitchen!</strong></p>
-        <input type="text" id="bomb-word-input" placeholder="Type word fast..." class="game-input" />
-        <button class="btn-action" onclick="App.submitChoice(document.getElementById('bomb-word-input').value)">PASS BOMB 💣</button>
+        <p>Category: <strong>Items in a kitchen!</strong></p>
+        <input type="text" id="bomb-input" placeholder="Type word fast..." class="game-input" />
+        <button class="btn-action" onclick="App.submitChoice(document.getElementById('bomb-input').value)">PASS BOMB 💣</button>
       </div>
     `;
   },
@@ -451,9 +464,9 @@ window.App = {
     return `
       <div class="dilemma-card">
         <h3>🔤 First / Last Letter</h3>
-        <p>Say a word starting with the letter: <strong>'E'</strong></p>
-        <input type="text" id="letter-word-input" placeholder="Type word..." class="game-input" />
-        <button class="btn-action" onclick="App.submitChoice(document.getElementById('letter-word-input').value)">Submit Word</button>
+        <p>Word must start with letter: <strong>'E'</strong></p>
+        <input type="text" id="letter-input" placeholder="Type word..." class="game-input" />
+        <button class="btn-action" onclick="App.submitChoice(document.getElementById('letter-input').value)">Submit Word</button>
       </div>
     `;
   },
@@ -462,17 +475,17 @@ window.App = {
     const choices = this.gameState.choices || {};
     const keys = Object.keys(choices);
     if (keys.length === 0) {
-      return `<p class="status-msg">Waiting for choices...</p>`;
+      return `<p style="color:#666; font-size:14px; margin-top:10px;">Waiting for answers...</p>`;
     }
-    
-    let html = `<div class="results-comparison"><h4>Live Answers:</h4>`;
+
+    let html = `<div style="background:#FAF9F7; border:1px solid #E8E6E3; padding:12px; border-radius:12px; margin-top:12px;"><strong>Live Choice Sync:</strong>`;
     keys.forEach(k => {
       const isMe = k === this.myId;
-      html += `<div class="result-row"><span>${isMe ? 'You' : 'Partner'}:</span> <strong>${choices[k]}</strong></div>`;
+      html += `<div style="margin-top:4px;">${isMe ? 'You' : 'Partner'}: <strong>${choices[k]}</strong></div>`;
     });
     if (keys.length >= 2) {
-      const match = choices[keys[0]] === choices[keys[1]];
-      html += `<div class="match-banner ${match ? 'match' : 'different'}">${match ? '🎉 MATCH!' : '🤝 Different choices — discuss!'}</div>`;
+      const isMatch = choices[keys[0]] === choices[keys[1]];
+      html += `<div style="margin-top:8px; padding:8px; border-radius:6px; font-weight:700; text-align:center; background:${isMatch ? '#E6F4EA' : '#FEF7E0'}; color:${isMatch ? '#137333' : '#B06000'};">${isMatch ? '🎉 MATCH!' : '🤝 Different choices — discuss!'}</div>`;
     }
     html += `</div>`;
     return html;
