@@ -1,4 +1,4 @@
-// DuoVibe Direct Real-Time Broadcast & Presence Engine
+// DuoVibe Bulletproof Database REST Polling Sync Engine (USA <-> Nigeria)
 const SUPABASE_URL = (window.CONFIG && window.CONFIG.SUPABASE_URL) || "https://euqrzxxldlsbhuyjuleo.supabase.co";
 const SUPABASE_KEY = (window.CONFIG && window.CONFIG.SUPABASE_ANON_KEY) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1cXJ6eHhsZGxzYmh1eWp1bGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NTUzOTAsImV4cCI6MjA5MzIzMTM5MH0.J4zrhIzjIBkUmxHEPcaoxgoFudtAvXHmJaPToigR_ig";
 
@@ -7,9 +7,7 @@ let sbClient = null;
 function initSupabase() {
   if (window.supabase && typeof window.supabase.createClient === "function") {
     try {
-      sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-        realtime: { params: { eventsPerSecond: 10 } }
-      });
+      sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
       window.sb = sbClient;
     } catch (e) {
       console.error("Supabase init error:", e);
@@ -51,9 +49,9 @@ window.App = {
   myName: localStorage.getItem("duo_my_name") || ("Player " + Math.floor(Math.random() * 100)),
   roomCode: null,
   activeGame: null,
-  gameState: { choices: {} },
-  channel: null,
-  peers: {},
+  gameState: { choices: {}, players: {} },
+  pollTimer: null,
+  lastDbState: "",
 
   init() {
     initSupabase();
@@ -72,7 +70,7 @@ window.App = {
     c.innerHTML = `
       <div class="home-card">
         <h2>Welcome to DuoVibe 💕</h2>
-        <p>Play real-time games with your partner or friends instantly.</p>
+        <p>Play real-time games with your partner across the world.</p>
         
         <div style="margin-top:16px;">
           <label style="font-size:13px; font-weight:800; color:#666;">YOUR NAME:</label>
@@ -87,8 +85,28 @@ window.App = {
             <button class="btn-secondary" style="width:110px;" onclick="App.joinRoomWithCode()">Join</button>
           </div>
         </div>
+
+        <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:13px;" onclick="App.testDb()">🔍 Test Database Connection</button>
+        <div id="db-test-res" style="font-size:12px; margin-top:8px; color:#555; white-space:pre-wrap;"></div>
       </div>
     `;
+  },
+
+  async testDb() {
+    const res = document.getElementById("db-test-res");
+    res.textContent = "Testing database connection...";
+    if (!sbClient) initSupabase();
+    if (!sbClient) { res.textContent = "❌ Supabase client not loaded."; return; }
+    try {
+      const { data, error } = await sbClient.from("rooms").select("id").limit(1);
+      if (error) {
+        res.textContent = "❌ DB Error: " + error.message + "\n(Make sure you ran supabase-schema.sql in your Supabase SQL Editor!)";
+      } else {
+        res.textContent = "✅ SUCCESS! Connected to Supabase rooms table.";
+      }
+    } catch (e) {
+      res.textContent = "❌ Exception: " + e.message;
+    }
   },
 
   saveName() {
@@ -116,99 +134,139 @@ window.App = {
     }
   },
 
-  joinRoom(code) {
+  async joinRoom(code) {
     this.roomCode = code;
     this.activeGame = null;
-    this.gameState = { choices: {} };
+    this.gameState = { choices: {}, players: {} };
     this.renderLobby();
 
     if (!sbClient) initSupabase();
-    if (!sbClient) {
-      alert("Supabase client not initialized.");
-      return;
-    }
+    if (!sbClient) { alert("Supabase not loaded."); return; }
 
-    // Remove existing channel if any
-    if (this.channel) {
-      try { sbClient.removeChannel(this.channel); } catch (e) {}
-    }
+    try {
+      // 1. Fetch or insert room in Supabase
+      let { data: room, error } = await sbClient.from("rooms").select("*").eq("id", code).maybeSingle();
 
-    const channelName = "duovibe_live_room_" + code;
-    this.channel = sbClient.channel(channelName, {
-      config: {
-        presence: { key: this.myId },
-        broadcast: { self: true }
+      let players = {};
+      let currentGame = "";
+      let currentState = { choices: {}, players: {} };
+
+      if (!room) {
+        players[this.myId] = this.myName;
+        currentState = { choices: {}, players: players };
+        
+        const { error: insErr } = await sbClient.from("rooms").insert({
+          id: code,
+          current_game: "",
+          game_state: currentState
+        });
+
+        if (insErr) {
+          alert("Database setup required!\n\nPlease go to your Supabase Dashboard -> SQL Editor, and run supabase-schema.sql.\n\nError: " + insErr.message);
+          return;
+        }
+      } else {
+        currentGame = room.current_game || "";
+        currentState = room.game_state || { choices: {}, players: {} };
+        currentState.players = currentState.players || {};
+        currentState.players[this.myId] = this.myName;
+
+        await sbClient.from("rooms").update({
+          game_state: currentState,
+          updated_at: new Date().toISOString()
+        }).eq("id", code);
+
+        this.activeGame = currentGame || null;
+        this.gameState = currentState;
       }
-    });
 
-    this.channel
-      .on("presence", { event: "sync" }, () => {
-        const state = this.channel.presenceState();
-        this.peers = state;
-        const count = Object.keys(state).length || 1;
-        this.updateStatus("live", "LIVE (" + count + ")");
-        this.updatePresenceUI();
-      })
-      .on("broadcast", { event: "GAME_ACTION" }, ({ payload }) => {
-        if (!payload) return;
+      this.updateStatus("live", "LIVE (Synced)");
+      this.renderCurrentView();
 
-        if (payload.action === "START") {
-          this.activeGame = payload.gameId;
-          this.gameState = payload.gameState || { choices: {} };
-          this.renderActiveGame();
-        } else if (payload.action === "CHOICE") {
-          if (!this.gameState.choices) this.gameState.choices = {};
-          this.gameState.choices[payload.playerId] = payload.choice;
-          this.renderActiveGame();
+      // 2. Poll Supabase database every 1.5 seconds for instant cross-device sync
+      if (this.pollTimer) clearInterval(this.pollTimer);
+      this.pollTimer = setInterval(() => this.pollRoomsTable(), 1500);
 
-          if (Object.keys(this.gameState.choices).length >= 2 && window.confetti) {
-            window.confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
-          }
-        } else if (payload.action === "EXIT") {
-          this.activeGame = null;
-          this.gameState = { choices: {} };
-          this.renderLobby();
-        } else if (payload.action === "CLUE") {
-          if (this.gameState) {
-            this.gameState.clueIdx = payload.clueIdx;
-            this.renderActiveGame();
-          }
-        }
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          this.updateStatus("live", "LIVE");
-          this.channel.track({ id: this.myId, name: this.myName, joinedAt: Date.now() });
-
-          // Request state in case another player is already playing
-          this.broadcastAction({ action: "REQUEST_STATE", playerId: this.myId });
-        } else if (status === "CHANNEL_ERROR") {
-          this.updateStatus("offline", "CHANNEL ERR");
-        }
-      });
-  },
-
-  broadcastAction(payload) {
-    if (this.channel) {
-      this.channel.send({
-        type: "broadcast",
-        event: "GAME_ACTION",
-        payload: payload
-      });
+    } catch (err) {
+      console.error("Join error:", err);
+      alert("Error joining room: " + err.message);
     }
   },
 
-  updatePresenceUI() {
+  async pollRoomsTable() {
+    if (!this.roomCode || !sbClient) return;
+
+    try {
+      let { data: room, error } = await sbClient.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
+      if (!room) return;
+
+      const remoteGame = room.current_game || "";
+      const remoteState = room.game_state || { choices: {}, players: {} };
+
+      // Update players list UI
+      this.updatePresenceUI(remoteState.players || {});
+
+      // If active game or game state changed on server, update local
+      const stateStr = JSON.stringify({ game: remoteGame, state: remoteState });
+      if (stateStr !== this.lastDbState) {
+        this.lastDbState = stateStr;
+        this.activeGame = remoteGame || null;
+        this.gameState = remoteState;
+        this.renderCurrentView();
+      }
+    } catch (e) {
+      // Background poll silent catch
+    }
+  },
+
+  renderCurrentView() {
+    if (this.activeGame) {
+      if (!document.querySelector(".active-game-wrapper")) {
+        this.renderActiveGame();
+      } else {
+        this.updateActiveGameUI();
+      }
+    } else {
+      if (!document.querySelector(".lobby-card")) {
+        this.renderLobby();
+      } else {
+        this.updatePresenceUI();
+      }
+    }
+  },
+
+  async pushStateToDB() {
+    if (!this.roomCode || !sbClient) return;
+    try {
+      // Ensure current user is in players map
+      this.gameState.players = this.gameState.players || {};
+      this.gameState.players[this.myId] = this.myName;
+
+      const payload = {
+        current_game: this.activeGame || "",
+        game_state: this.gameState,
+        updated_at: new Date().toISOString()
+      };
+
+      this.lastDbState = JSON.stringify({ game: this.activeGame, state: this.gameState });
+
+      await sbClient.from("rooms").update(payload).eq("id", this.roomCode);
+    } catch (e) {
+      console.error("Push DB error:", e);
+    }
+  },
+
+  updatePresenceUI(playersMap) {
     const container = document.getElementById("connected-players-list");
     if (!container) return;
 
+    playersMap = playersMap || (this.gameState && this.gameState.players) || { [this.myId]: this.myName };
     const names = [];
-    Object.keys(this.peers).forEach((key) => {
-      const p = this.peers[key];
-      if (p && p[0] && p[0].name) {
-        const isMe = key === this.myId;
-        names.push(`🟢 ${p[0].name}${isMe ? " (You)" : ""}`);
-      }
+
+    Object.keys(playersMap).forEach((id) => {
+      const name = playersMap[id];
+      const isMe = id === this.myId;
+      names.push(`🟢 ${name}${isMe ? " (You)" : ""}`);
     });
 
     if (names.length === 0) names.push(`🟢 ${this.myName} (You)`);
@@ -257,7 +315,11 @@ window.App = {
 
   launchGame(gameId) {
     this.activeGame = gameId;
-    this.gameState = { choices: {}, currentPrompt: null, rankSet: null, secretNumber: null, clueIdx: 0 };
+    this.gameState.choices = {};
+    this.gameState.currentPrompt = null;
+    this.gameState.rankSet = null;
+    this.gameState.secretNumber = null;
+    this.gameState.clueIdx = 0;
 
     if (gameId === "would-rather") this.gameState.currentPrompt = window.Picker.nextItem("wouldRather", window.BANKS.wouldRather);
     if (gameId === "this-or-that") this.gameState.currentPrompt = window.Picker.nextItem("thisOrThat", window.BANKS.thisOrThat);
@@ -270,15 +332,15 @@ window.App = {
     if (gameId === "guess-number") this.gameState.secretNumber = window.Picker.freshNumber(1, 100);
     if (gameId === "blind-rank") this.gameState.rankSet = window.Picker.freshBlindRankSet(5);
 
-    this.broadcastAction({ action: "START", gameId: gameId, gameState: this.gameState });
+    this.pushStateToDB();
     this.renderActiveGame();
     window.scrollTo(0, 0);
   },
 
   exitGame() {
     this.activeGame = null;
-    this.gameState = { choices: {} };
-    this.broadcastAction({ action: "EXIT" });
+    this.gameState.choices = {};
+    this.pushStateToDB();
     this.renderLobby();
   },
 
@@ -287,13 +349,7 @@ window.App = {
     if (!this.gameState.choices) this.gameState.choices = {};
 
     this.gameState.choices[this.myId] = val.toString().trim();
-
-    this.broadcastAction({
-      action: "CHOICE",
-      playerId: this.myId,
-      choice: val.toString().trim()
-    });
-
+    this.pushStateToDB();
     this.renderActiveGame();
 
     if (Object.keys(this.gameState.choices).length >= 2 && window.confetti) {
@@ -303,8 +359,8 @@ window.App = {
 
   getPlayerNameById(id) {
     if (id === this.myId) return "You";
-    const p = this.peers[id];
-    if (p && p[0] && p[0].name) return p[0].name;
+    const playersMap = (this.gameState && this.gameState.players) || {};
+    if (playersMap[id]) return playersMap[id];
     return "Partner";
   },
 
@@ -334,6 +390,16 @@ window.App = {
 
     html += '</div>';
     return html;
+  },
+
+  updateActiveGameUI() {
+    const compBar = document.querySelector('.comparison-bar');
+    if (compBar) {
+      const parent = compBar.parentNode;
+      const temp = document.createElement('div');
+      temp.innerHTML = this.renderChoiceComparison();
+      parent.replaceChild(temp.firstElementChild, compBar);
+    }
   },
 
   renderActiveGame() {
@@ -448,7 +514,7 @@ window.App = {
           <div style="background:#FAF9F7; border:1px solid #E8E6E3; padding:12px; border-radius:12px; margin:12px 0;">
             ${cluesShown.map((c, i) => `<p style="margin-bottom:4px;"><strong>Clue #${i + 1}:</strong> ${esc(c)}</p>`).join("")}
           </div>
-          ${clueIdx < cur.clues.length - 1 ? `<button class="btn-secondary" style="margin-bottom:10px;" onclick="App.gameState.clueIdx++; App.broadcastAction({action:'CLUE', clueIdx:App.gameState.clueIdx}); App.renderActiveGame();">Reveal Next Clue 💡</button>` : ""}
+          ${clueIdx < cur.clues.length - 1 ? `<button class="btn-secondary" style="margin-bottom:10px;" onclick="App.gameState.clueIdx++; App.pushStateToDB(); App.renderActiveGame();">Reveal Next Clue 💡</button>` : ""}
           <input type="text" id="game-input-val" placeholder="Type answer..." class="game-input" />
           <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('game-input-val').value)">Submit Guess</button>
           <button class="btn-secondary" style="margin-top:8px;" onclick="alert('Correct Answer: ' + App.gameState.currentPrompt.answer)">Reveal Celebrity</button>
