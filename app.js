@@ -24,6 +24,7 @@
     gameState: { choices: {}, players: {} },
     pollTimer: null,
     lastHash: "",
+    syncStatus: "Ready",
 
     init() {
       this.renderHome();
@@ -48,8 +49,19 @@
               <button class="btn-secondary" style="width:110px;" onclick="App.joinRoomWithCode()">Join</button>
             </div>
           </div>
+          <div id="sync-banner" style="margin-top:14px; font-size:12px; color:#137333; font-weight:700; background:#E6F4EA; padding:8px; border-radius:8px; text-align:center;">Status: Ready</div>
         </div>
       `;
+    },
+
+    setBanner(msg, isError = false) {
+      this.syncStatus = msg;
+      const b = document.getElementById("sync-banner");
+      if (b) {
+        b.textContent = msg;
+        b.style.background = isError ? "#FDEAEA" : "#E6F4EA";
+        b.style.color = isError ? "#A52A2A" : "#137333";
+      }
     },
 
     saveName() {
@@ -79,16 +91,29 @@
       this.activeGame = null;
       this.gameState = { choices: {}, players: {} };
       this.renderLobby();
+      this.setBanner("Connecting to room " + code + "...");
 
-      if (!sb) return;
+      if (!sb) {
+        this.setBanner("❌ Supabase client missing", true);
+        return;
+      }
 
       try {
-        let { data: room } = await sb.from("rooms").select("*").eq("id", code).maybeSingle();
+        let { data: room, error } = await sb.from("rooms").select("*").eq("id", code).maybeSingle();
         let state = { choices: {}, players: {} };
+
+        if (error) {
+          this.setBanner("⚠️ DB Fetch warning: " + error.message, true);
+        }
 
         if (!room) {
           state.players[this.myId] = this.myName;
-          await sb.from("rooms").insert({ id: code, current_game: "", game_state: state });
+          const { error: insErr } = await sb.from("rooms").insert({ id: code, current_game: "", game_state: state });
+          if (insErr) {
+            this.setBanner("❌ DB Insert Error: " + insErr.message, true);
+            alert("Database Error: " + insErr.message + "\nMake sure you ran supabase-schema.sql in Supabase SQL Editor!");
+            return;
+          }
         } else {
           state = room.game_state || { choices: {}, players: {} };
           state.players = state.players || {};
@@ -98,23 +123,30 @@
           this.gameState = state;
         }
 
+        this.setBanner("🟢 Connected! Room " + code);
+
         if (this.pollTimer) clearInterval(this.pollTimer);
         this.pollTimer = setInterval(() => this.pollDB(), 1500);
       } catch (e) {
-        console.error("Join error:", e);
+        this.setBanner("❌ Exception: " + e.message, true);
       }
     },
 
+    // SMART MERGE POLL (Prevents overwriting partner's choices)
     async pollDB() {
       if (!this.roomCode || !sb) return;
       try {
-        let { data: room } = await sb.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
-        if (!room) return;
+        let { data: room, error } = await sb.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
+        if (error || !room) return;
 
         const remoteGame = room.current_game || "";
         const remoteState = room.game_state || { choices: {}, players: {} };
 
         this.updatePlayersUI(remoteState.players || {});
+
+        // Merge choices so local doesn't wipe remote
+        const mergedChoices = Object.assign({}, remoteState.choices || {}, this.gameState.choices || {});
+        remoteState.choices = mergedChoices;
 
         const hash = JSON.stringify({ g: remoteGame, s: remoteState });
         if (hash !== this.lastHash) {
@@ -140,19 +172,36 @@
       }
     },
 
+    // FETCH-BEFORE-UPDATE (Bulletproof sync)
     async pushDB() {
       if (!this.roomCode || !sb) return;
       try {
-        this.gameState.players = this.gameState.players || {};
-        this.gameState.players[this.myId] = this.myName;
+        // 1. Fetch latest remote state first
+        let { data: room } = await sb.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
+        let remoteState = room ? (room.game_state || { choices: {}, players: {} }) : { choices: {}, players: {} };
 
-        this.lastHash = JSON.stringify({ g: this.activeGame, s: this.gameState });
+        // 2. Merge players and choices safely
+        remoteState.players = Object.assign({}, remoteState.players || {}, this.gameState.players || {});
+        remoteState.players[this.myId] = this.myName;
+
+        remoteState.choices = Object.assign({}, remoteState.choices || {}, this.gameState.choices || {});
+
+        const currentGame = this.activeGame || (room ? room.current_game : "") || "";
+
+        this.gameState = remoteState;
+        this.lastHash = JSON.stringify({ g: currentGame, s: remoteState });
+
+        // 3. Push merged state
         await sb.from("rooms").update({
-          current_game: this.activeGame || "",
-          game_state: this.gameState,
+          current_game: currentGame,
+          game_state: remoteState,
           updated_at: new Date().toISOString()
         }).eq("id", this.roomCode);
-      } catch (e) {}
+
+        this.setBanner("🟢 Synced");
+      } catch (e) {
+        this.setBanner("⚠️ Sync retry...", true);
+      }
     },
 
     updatePlayersUI(playersMap) {
@@ -195,12 +244,13 @@
             <div class="game-card" onclick="App.launchGame('guess-age')"><span>📅</span> <h4>Guess The Year</h4></div>
             <div class="game-card" onclick="App.launchGame('guess-number')"><span>🔢</span> <h4>Guess Number</h4></div>
           </div>
+          <div id="sync-banner" style="margin-top:14px; font-size:12px; color:#137333; font-weight:700; background:#E6F4EA; padding:8px; border-radius:8px; text-align:center;">Status: Room Active</div>
         </div>
       `;
       this.updatePlayersUI(this.gameState.players || {});
     },
 
-    launchGame(gameId) {
+    async launchGame(gameId) {
       this.activeGame = gameId;
       this.gameState.choices = {};
       const banks = window.BANKS || {};
@@ -213,24 +263,30 @@
       if (gameId === "blind-rank") this.gameState.rankSet = picker.freshBlindRankSet(5);
       if (gameId === "guess-number") this.gameState.secretNumber = picker.freshNumber(1, 100);
 
-      this.pushDB();
+      await this.pushDB();
       this.renderActiveGame();
       window.scrollTo(0, 0);
     },
 
-    exitGame() {
+    async exitGame() {
       this.activeGame = null;
       this.gameState.choices = {};
-      this.pushDB();
+      await this.pushDB();
       this.renderLobby();
     },
 
-    submitChoice(val) {
+    async submitChoice(val) {
       if (!val || !val.toString().trim()) { alert("Please enter or select an answer."); return; }
+      
+      // Pull latest before submitting so we don't overwrite partner's answers
+      await this.pollDB();
+
       this.gameState.choices = this.gameState.choices || {};
       this.gameState.choices[this.myId] = val.toString().trim();
-      this.pushDB();
+      
+      await this.pushDB();
       this.renderActiveGame();
+
       if (Object.keys(this.gameState.choices).length >= 2 && window.confetti) {
         window.confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
       }
@@ -327,6 +383,7 @@
           ${body}
           ${this.renderComparison()}
           <button class="btn-action" style="margin-top:16px;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
+          <div id="sync-banner" style="margin-top:14px; font-size:12px; color:#137333; font-weight:700; background:#E6F4EA; padding:8px; border-radius:8px; text-align:center;">Status: In Game</div>
         </div>
       `;
     }
