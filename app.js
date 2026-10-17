@@ -13,9 +13,6 @@
     if (window.supabase && typeof window.supabase.createClient === "function") {
       sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
       window.sb = sb;
-      console.log("Supabase client initialized successfully.");
-    } else {
-      console.error("Supabase CDN not loaded.");
     }
   } catch (e) { console.error("Supabase init error:", e); }
 
@@ -113,7 +110,7 @@
       this.log("Joining room " + code + "...");
 
       if (!sb) {
-        this.log("Supabase missing", true);
+        this.log("Supabase client missing", true);
         return;
       }
 
@@ -138,7 +135,10 @@
           state = room.game_state || { choices: {}, players: {} };
           state.players = state.players || {};
           state.players[this.myId] = this.myName;
-          await sb.from("rooms").update({ game_state: state, updated_at: new Date().toISOString() }).eq("id", code);
+          const { error: updErr } = await sb.from("rooms").update({ game_state: state, updated_at: new Date().toISOString() }).eq("id", code);
+          if (updErr) {
+            this.log("Update Error: " + updErr.message, true);
+          }
           this.activeGame = room.current_game || null;
           this.gameState = state;
           this.log("Joined existing room in cloud.");
@@ -155,7 +155,14 @@
       if (!this.roomCode || !sb) return;
       try {
         let { data: room, error } = await sb.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
-        if (error || !room) return;
+        if (error) {
+          this.log("Poll error: " + error.message, true);
+          return;
+        }
+        if (!room) {
+          this.log("Room " + this.roomCode + " not found in DB", true);
+          return;
+        }
 
         const remoteGame = room.current_game || "";
         const remoteState = room.game_state || { choices: {}, players: {} };
@@ -173,7 +180,9 @@
           this.log("Synced remote change: " + (remoteGame || "Lobby"));
           this.renderCurrentView();
         }
-      } catch (e) {}
+      } catch (e) {
+        this.log("Poll exception: " + e.message, true);
+      }
     },
 
     renderCurrentView() {
