@@ -44,7 +44,7 @@
 
     log(msg, isErr = false) {
       console.log("DuoVibe:", msg);
-      this.lastLog = (isErr ? "❌ " : "⚡ ") + msg;
+      this.lastLog = (isErr ? "[ERR] " : "[OK] ") + msg;
       const dbg = document.getElementById("debug-hud");
       if (dbg) dbg.textContent = this.lastLog;
     },
@@ -54,21 +54,21 @@
       if (!c) return;
       c.innerHTML = `
         <div class="home-card">
-          <h2>Welcome to DuoVibe 🎮</h2>
+          <h2>Welcome to DuoVibe</h2>
           <p>Play live two-player games with your partner.</p>
           <div style="margin-top:16px;">
             <label style="font-size:13px; font-weight:800; color:#666;">YOUR NAME</label>
             <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Your name" />
           </div>
           <div style="margin-top:16px;">
-            <button class="btn-primary" onclick="App.createRoom()">👑 Create Room (Become Host)</button>
+            <button class="btn-primary" onclick="App.createRoom()">Create Room (Host)</button>
             <div class="divider">OR JOIN AS PLAYER</div>
             <div style="display:flex; gap:8px;">
               <input id="input-room-code" placeholder="6-DIGIT CODE" class="game-input" style="text-transform:uppercase; letter-spacing:2px; text-align:center;" maxlength="6" />
               <button class="btn-secondary" style="width:110px;" onclick="App.joinRoomWithCode()">Join</button>
             </div>
           </div>
-          <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:12px;" onclick="App.testConnection()">⚡ Test Supabase Connection</button>
+          <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:12px;" onclick="App.testConnection()">Test Connection</button>
           <div id="debug-hud" style="margin-top:12px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">Ready</div>
         </div>
       `;
@@ -83,8 +83,8 @@
           this.log("DB Error: " + error.message, true);
           alert("DB Error: " + error.message);
         } else {
-          this.log("Supabase connected successfully.");
-          alert("✅ Connected to Supabase rooms table!");
+          this.log("Connected to Supabase rooms table.");
+          alert("Connected to Supabase rooms table!");
         }
       } catch (err) {
         this.log("Exception: " + err.message, true);
@@ -125,17 +125,17 @@
 
       const sb = getClient();
       if (!sb) {
-        this.log("Supabase client not initialized", true);
+        this.log("Supabase client missing", true);
         return;
       }
 
       try {
         let { data: room, error } = await sb.from("rooms").select("*").eq("id", code).maybeSingle();
-        if (error) this.log("Fetch: " + error.message, true);
+        if (error) this.log("Fetch error: " + error.message, true);
 
         if (!room) {
           if (!creatingAsHost) {
-            alert("Room not found. Check the code or have the host create it first.");
+            alert("Room " + code + " not found. Ask the host to create it first!");
             this.renderHome();
             return;
           }
@@ -155,7 +155,7 @@
         } else {
           let state = room.game_state || { choices: {}, players: {}, hostId: null };
           state.players = state.players || {};
-          
+
           if (!state.hostId && creatingAsHost) {
             state.hostId = this.myId;
           }
@@ -168,7 +168,7 @@
 
           this.activeGame = room.current_game || null;
           this.gameState = state;
-          this.log(`Joined room as ${assignedRole.toUpperCase()}`);
+          this.log("Joined room as " + assignedRole.toUpperCase());
         }
 
         if (this.pollTimer) clearInterval(this.pollTimer);
@@ -188,10 +188,24 @@
 
         const remoteGame = room.current_game || "";
         const remoteState = room.game_state || { choices: {}, players: {}, hostId: null };
+        remoteState.players = remoteState.players || {};
+        remoteState.choices = remoteState.choices || {};
 
+        let needsSync = false;
         if (!remoteState.players[this.myId]) {
           remoteState.players[this.myId] = { name: this.myName, role: this.myRole };
-          await sb.from("rooms").update({ game_state: remoteState }).eq("id", this.roomCode);
+          needsSync = true;
+        }
+
+        if (this.gameState.choices && this.gameState.choices[this.myId]) {
+          if (remoteState.choices[this.myId] !== this.gameState.choices[this.myId]) {
+            remoteState.choices[this.myId] = this.gameState.choices[this.myId];
+            needsSync = true;
+          }
+        }
+
+        if (needsSync) {
+          await sb.from("rooms").update({ game_state: remoteState, updated_at: new Date().toISOString() }).eq("id", this.roomCode);
         }
 
         const hash = JSON.stringify({ g: remoteGame, s: remoteState });
@@ -259,7 +273,7 @@
         const isHost = id === this.gameState.hostId;
         const isMe = id === this.myId;
         items.push(`<span class="player-tag" style="background:${isHost ? '#FFF4E5; border:1px solid #FF9800;' : '#EEF2FF; border:1px solid #6366F1;'}">
-          ${isHost ? '👑' : '👤'} ${esc(pName)} ${isMe ? '(You)' : ''} [${isHost ? 'HOST' : 'PLAYER'}]
+          ${isHost ? '[HOST]' : '[PLAYER]'} ${esc(pName)}${isMe ? '(You)' : ''}
         </span>`);
       });
       container.innerHTML = items.join(" ");
@@ -277,7 +291,7 @@
               <span class="room-label">ROOM CODE</span>
               <h2 class="room-code-display">${esc(this.roomCode)}</h2>
             </div>
-            <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Code copied!');">📋 Copy</button>
+            <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Code copied!');">Copy</button>
           </div>
           <div style="margin: 16px 0;">
             <label style="font-size:11px; font-weight:800; color:#8E8E93;">PLAYERS CONNECTED:</label>
@@ -285,13 +299,13 @@
           </div>
 
           ${isHost ? `
-            <h3 style="margin-top:20px;">Choose a Game (You are Host 👑)</h3>
+            <h3 style="margin-top:20px;">Choose a Game (You are Host)</h3>
             <div class="games-grid-container">
-              <div class="game-card" onclick="App.launchGame('would-rather')"><span>🤔</span> <h4>Would You Rather</h4></div>
-              <div class="game-card" onclick="App.launchGame('this-or-that')"><span>⚖️</span> <h4>This or That</h4></div>
-              <div class="game-card" onclick="App.launchGame('red-green-flag')"><span>🚩</span> <h4>Red/Green Flag</h4></div>
-              <div class="game-card" onclick="App.launchGame('couple-compat')"><span>❤️</span> <h4>Compat Quiz</h4></div>
-              <div class="game-card" onclick="App.launchGame('blind-rank')"><span>🔢</span> <h4>Blind Rank</h4></div>
+              <div class="game-card" onclick="App.launchGame('would-rather')"><h4>Would You Rather</h4></div>
+              <div class="game-card" onclick="App.launchGame('this-or-that')"><h4>This or That</h4></div>
+              <div class="game-card" onclick="App.launchGame('red-green-flag')"><h4>Red/Green Flag</h4></div>
+              <div class="game-card" onclick="App.launchGame('couple-compat')"><h4>Compat Quiz</h4></div>
+              <div class="game-card" onclick="App.launchGame('blind-rank')"><h4>Blind Rank</h4></div>
             </div>
           ` : `
             <div style="padding:24px; text-align:center; background:#FAF9F7; border:1px solid #E8E6E3; border-radius:12px; margin-top:20px;">
@@ -367,7 +381,7 @@
       if (keys.length >= 2) {
         const vals = keys.map(k => choices[k]);
         const match = vals.every(v => v === vals[0]);
-        html += `<div style="text-align:center;font-weight:900;margin-top:10px;color:${match ? '#137333' : '#1A1A1A'};">${match ? '🎉 MATCH!' : '⚡ Different choices'}</div>`;
+        html += `<div style="text-align:center;font-weight:900;margin-top:10px;color:${match ? '#137333' : '#1A1A1A'};">${match ? 'MATCH!' : 'Different choices'}</div>`;
       }
       html += '</div>';
       return html;
@@ -408,16 +422,16 @@
           body = `
             <h3>Red Flag or Green Flag?</h3>
             <p style="font-weight:700;margin:16px 0;">"${esc(cur)}"</p>
-            <button class="btn-choice ${myChoice === '🚩 Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('🚩 Red Flag')">🚩 Red Flag</button>
-            <button class="btn-choice ${myChoice === '🌿 Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('🌿 Green Flag')">🌿 Green Flag</button>
+            <button class="btn-choice ${myChoice === 'Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('Red Flag')">Red Flag</button>
+            <button class="btn-choice ${myChoice === 'Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('Green Flag')">Green Flag</button>
           `;
           break;
         case "couple-compat":
           body = `
             <h3>Compatibility Quiz</h3>
             <p style="font-weight:700;margin:16px 0;">${esc(cur)}</p>
-            <button class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')">🙋‍♂️ Definitely Me</button>
-            <button class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')">🙋‍♀️ Definitely Partner</button>
+            <button class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')">Definitely Me</button>
+            <button class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')">Definitely Partner</button>
           `;
           break;
         case "blind-rank":
@@ -441,7 +455,7 @@
         <div class="active-game-wrapper">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             ${isHost ? `
-              <button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="App.exitGame()">← Lobby</button>
+              <button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="App.exitGame()">Lobby</button>
             ` : `
               <span style="font-size:12px;color:#8E8E93;font-weight:700;">Host controls the session</span>
             `}
@@ -449,7 +463,7 @@
           </div>
           ${body}
           ${this.renderComparison()}${isHost ? `
-            <button class="btn-action" style="margin-top:16px;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
+            <button class="btn-action" style="margin-top:16px;" onclick="App.launchGame('${this.activeGame}')">Next Round</button>
           ` : `
             <p style="font-size:12px;color:#888;margin-top:12px;text-align:center;">Waiting for Host to advance to next round...</p>
           `}
