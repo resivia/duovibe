@@ -1,39 +1,50 @@
-﻿// DuoVibe Cloud Sync Engine - Version: sync99
 (function () {
   "use strict";
 
   function esc(val) {
-    return String(val == null ? "" : val).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    return String(val == null ? "" : val)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   const SUPABASE_URL = (window.CONFIG && window.CONFIG.SUPABASE_URL) || "https://euqrzxxldlsbhuyjuleo.supabase.co";
   const SUPABASE_KEY = (window.CONFIG && window.CONFIG.SUPABASE_ANON_KEY) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1cXJ6eHhsZGxzYmh1eWp1bGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NTUzOTAsImV4cCI6MjA5MzIzMTM5MH0.J4zrhIzjIBkUmxHEPcaoxgoFudtAvXHmJaPToigR_ig";
 
-  let sb = (window.supabase && typeof window.supabase.createClient === "function") ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
-  try {
+  function getClient() {
+    if (window.sb) return window.sb;
     if (window.supabase && typeof window.supabase.createClient === "function") {
-      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      window.sb = sb;
+      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      return window.sb;
     }
-  } catch (e) { console.error("Supabase error:", e); }
+    return null;
+  }
 
   window.App = {
     myId: "user_" + Math.random().toString(36).slice(2, 10),
     myName: localStorage.getItem("duo_my_name") || ("Player " + Math.floor(Math.random() * 100)),
+    myRole: "player",
     roomCode: null,
     activeGame: null,
-    gameState: { choices: {}, players: {} },
+    gameState: { choices: {}, players: {}, hostId: null },
     pollTimer: null,
     lastHash: "",
-    lastLog: "App loaded (v99). Ready.",
+    lastLog: "App ready.",
 
     init() {
+      getClient();
       this.renderHome();
+    },
+
+    isHost() {
+      return this.gameState.hostId === this.myId;
     },
 
     log(msg, isErr = false) {
       console.log("DuoVibe:", msg);
-      this.lastLog = (isErr ? "âŒ " : "ðŸŸ¢ ") + msg;
+      this.lastLog = (isErr ? "❌ " : "⚡ ") + msg;
       const dbg = document.getElementById("debug-hud");
       if (dbg) dbg.textContent = this.lastLog;
     },
@@ -43,37 +54,37 @@
       if (!c) return;
       c.innerHTML = `
         <div class="home-card">
-          <h2>Welcome to DuoVibe ðŸ’•</h2>
-          <p>Play real-time games with your partner or friends across the world.</p>
+          <h2>Welcome to DuoVibe 🎮</h2>
+          <p>Play live two-player games with your partner.</p>
           <div style="margin-top:16px;">
             <label style="font-size:13px; font-weight:800; color:#666;">YOUR NAME</label>
             <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Your name" />
           </div>
           <div style="margin-top:16px;">
-            <button class="btn-primary" onclick="App.createRoom()">âœ¨ Create New Room</button>
-            <div class="divider">OR JOIN</div>
+            <button class="btn-primary" onclick="App.createRoom()">👑 Create Room (Become Host)</button>
+            <div class="divider">OR JOIN AS PLAYER</div>
             <div style="display:flex; gap:8px;">
               <input id="input-room-code" placeholder="6-DIGIT CODE" class="game-input" style="text-transform:uppercase; letter-spacing:2px; text-align:center;" maxlength="6" />
               <button class="btn-secondary" style="width:110px;" onclick="App.joinRoomWithCode()">Join</button>
             </div>
           </div>
-          <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:12px;" onclick="App.testConnection()">ðŸ” Test Cloud Connection</button>
-          <div id="debug-hud" style="margin-top:12px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">Status: Ready (v99)</div>
+          <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:12px;" onclick="App.testConnection()">⚡ Test Supabase Connection</button>
+          <div id="debug-hud" style="margin-top:12px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">Ready</div>
         </div>
       `;
     },
 
     async testConnection() {
-      if (!sb) { this.log("Supabase client is null", true); return; }
-      this.log("Testing Supabase connection...");
+      const sb = getClient();
+      if (!sb) { this.log("Supabase client failed to load from CDN", true); alert("Supabase client failed to load."); return; }
       try {
-        const { data, error } = await sb.from("rooms").select("id").limit(1);
+        const { error } = await sb.from("rooms").select("id").limit(1);
         if (error) {
           this.log("DB Error: " + error.message, true);
-          alert("DB Error: " + error.message + "\nDid you run supabase-schema.sql in Supabase?");
+          alert("DB Error: " + error.message);
         } else {
-          this.log("SUCCESS! Connected to Supabase rooms table.");
-          alert("âœ… SUCCESS! Connected to Supabase rooms table.");
+          this.log("Supabase connected successfully.");
+          alert("✅ Connected to Supabase rooms table!");
         }
       } catch (err) {
         this.log("Exception: " + err.message, true);
@@ -91,83 +102,108 @@
 
     createRoom() {
       this.saveName();
+      this.myRole = "host";
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      this.joinRoom(code);
+      this.joinRoom(code, true);
     },
 
     joinRoomWithCode() {
       this.saveName();
+      this.myRole = "player";
       const el = document.getElementById("input-room-code");
       const code = el ? el.value.trim().toUpperCase() : "";
-      if (code.length === 6) this.joinRoom(code);
+      if (code.length === 6) this.joinRoom(code, false);
       else alert("Enter a valid 6-digit room code.");
     },
 
-    async joinRoom(code) {
+    async joinRoom(code, creatingAsHost) {
       this.roomCode = code;
       this.activeGame = null;
-      this.gameState = { choices: {}, players: {} };
+      this.gameState = { choices: {}, players: {}, hostId: creatingAsHost ? this.myId : null };
       this.renderLobby();
-      this.log("Joining room " + code + "...");
+      this.log("Entering room " + code + "...");
 
+      const sb = getClient();
       if (!sb) {
-        this.log("Supabase missing", true);
+        this.log("Supabase client not initialized", true);
         return;
       }
 
       try {
         let { data: room, error } = await sb.from("rooms").select("*").eq("id", code).maybeSingle();
-        let state = { choices: {}, players: {} };
+        if (error) this.log("Fetch: " + error.message, true);
 
         if (!room) {
-          state.players[this.myId] = this.myName;
+          if (!creatingAsHost) {
+            alert("Room not found. Check the code or have the host create it first.");
+            this.renderHome();
+            return;
+          }
+          const state = {
+            hostId: this.myId,
+            players: { [this.myId]: { name: this.myName, role: "host" } },
+            choices: {}
+          };
           const { error: insErr } = await sb.from("rooms").insert({ id: code, current_game: "", game_state: state });
           if (insErr) {
             this.log("Insert Error: " + insErr.message, true);
-            alert("Database Error: " + insErr.message);
+            alert("DB Error: " + insErr.message);
             return;
           }
-          this.log("Created room in cloud.");
+          this.gameState = state;
+          this.log("Host created room " + code);
         } else {
-          state = room.game_state || { choices: {}, players: {} };
+          let state = room.game_state || { choices: {}, players: {}, hostId: null };
           state.players = state.players || {};
-          state.players[this.myId] = this.myName;
+          
+          if (!state.hostId && creatingAsHost) {
+            state.hostId = this.myId;
+          }
+
+          const assignedRole = (state.hostId === this.myId) ? "host" : "player";
+          this.myRole = assignedRole;
+          state.players[this.myId] = { name: this.myName, role: assignedRole };
+
           await sb.from("rooms").update({ game_state: state, updated_at: new Date().toISOString() }).eq("id", code);
+
           this.activeGame = room.current_game || null;
           this.gameState = state;
-          this.log("Joined room in cloud.");
+          this.log(`Joined room as ${assignedRole.toUpperCase()}`);
         }
 
         if (this.pollTimer) clearInterval(this.pollTimer);
-        this.pollTimer = setInterval(() => this.pollDB(), 1500);
+        this.pollTimer = setInterval(() => this.pollDB(), 1200);
+        this.renderLobby();
       } catch (e) {
-        this.log("Join exception: " + e.message, true);
+        this.log("Join error: " + e.message, true);
       }
     },
 
     async pollDB() {
+      const sb = getClient();
       if (!this.roomCode || !sb) return;
       try {
         let { data: room, error } = await sb.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
         if (error || !room) return;
 
         const remoteGame = room.current_game || "";
-        const remoteState = room.game_state || { choices: {}, players: {} };
+        const remoteState = room.game_state || { choices: {}, players: {}, hostId: null };
 
-        this.updatePlayersUI(remoteState.players || {});
-
-        const mergedChoices = Object.assign({}, remoteState.choices || {}, this.gameState.choices || {});
-        remoteState.choices = mergedChoices;
+        if (!remoteState.players[this.myId]) {
+          remoteState.players[this.myId] = { name: this.myName, role: this.myRole };
+          await sb.from("rooms").update({ game_state: remoteState }).eq("id", this.roomCode);
+        }
 
         const hash = JSON.stringify({ g: remoteGame, s: remoteState });
         if (hash !== this.lastHash) {
           this.lastHash = hash;
           this.activeGame = remoteGame || null;
           this.gameState = remoteState;
-          this.log("Synced: " + (remoteGame || "Lobby"));
           this.renderCurrentView();
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error("Poll err:", e);
+      }
     },
 
     renderCurrentView() {
@@ -180,55 +216,60 @@
       } else {
         if (!document.querySelector(".lobby-card")) {
           this.renderLobby();
+        } else {
+          this.updatePlayersUI(this.gameState.players || {});
         }
       }
     },
 
     async pushDB() {
+      const sb = getClient();
       if (!this.roomCode || !sb) return;
       try {
         let { data: room } = await sb.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
-        let remoteState = room ? (room.game_state || { choices: {}, players: {} }) : { choices: {}, players: {} };
+        let state = room ? (room.game_state || {}) : {};
 
-        remoteState.players = Object.assign({}, remoteState.players || {}, this.gameState.players || {});
-        remoteState.players[this.myId] = this.myName;
-        remoteState.choices = Object.assign({}, remoteState.choices || {}, this.gameState.choices || {});
+        state.hostId = this.gameState.hostId || (room && room.game_state ? room.game_state.hostId : this.myId);
+        state.players = Object.assign({}, state.players || {}, this.gameState.players || {});
+        state.choices = Object.assign({}, state.choices || {}, this.gameState.choices || {});
+        if (this.gameState.currentPrompt) state.currentPrompt = this.gameState.currentPrompt;
+        if (this.gameState.rankSet) state.rankSet = this.gameState.rankSet;
 
-        const currentGame = this.activeGame || (room ? room.current_game : "") || "";
+        const currentGame = this.activeGame || "";
+        this.gameState = state;
+        this.lastHash = JSON.stringify({ g: currentGame, s: state });
 
-        this.gameState = remoteState;
-        this.lastHash = JSON.stringify({ g: currentGame, s: remoteState });
-
-        const { error } = await sb.from("rooms").update({
+        await sb.from("rooms").update({
           current_game: currentGame,
-          game_state: remoteState,
+          game_state: state,
           updated_at: new Date().toISOString()
         }).eq("id", this.roomCode);
-
-        if (error) {
-          this.log("Push error: " + error.message, true);
-        } else {
-          this.log("Pushed to cloud.");
-        }
       } catch (e) {
-        this.log("Push exception: " + e.message, true);
+        this.log("Push error: " + e.message, true);
       }
     },
 
     updatePlayersUI(playersMap) {
       const container = document.getElementById("connected-players-list");
       if (!container) return;
-      const names = [];
+      const items = [];
       Object.keys(playersMap).forEach(id => {
-        const name = playersMap[id];
-        names.push(`ðŸŸ¢ ${esc(name)}${id === this.myId ? " (You)" : ""}`);
+        const p = playersMap[id];
+        const pName = typeof p === "object" ? p.name : p;
+        const isHost = id === this.gameState.hostId;
+        const isMe = id === this.myId;
+        items.push(`<span class="player-tag" style="background:${isHost ? '#FFF4E5; border:1px solid #FF9800;' : '#EEF2FF; border:1px solid #6366F1;'}">
+          ${isHost ? '👑' : '👤'} ${esc(pName)} ${isMe ? '(You)' : ''} [${isHost ? 'HOST' : 'PLAYER'}]
+        </span>`);
       });
-      container.innerHTML = names.map(n => `<span class="player-tag">${n}</span>`).join(" ");
+      container.innerHTML = items.join(" ");
     },
 
     renderLobby() {
       const c = document.getElementById("main-content");
       if (!c) return;
+      const isHost = this.isHost();
+
       c.innerHTML = `
         <div class="lobby-card">
           <div class="lobby-header-bar">
@@ -236,28 +277,29 @@
               <span class="room-label">ROOM CODE</span>
               <h2 class="room-code-display">${esc(this.roomCode)}</h2>
             </div>
-            <div style="display:flex;gap:6px;">
-              <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 10px;font-size:12px;" onclick="App.pollDB(); alert('Synced with cloud!');">ðŸ”„ Sync</button>
-              <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 10px;font-size:12px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Copied!');">ðŸ“‹ Copy</button>
-            </div>
+            <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Code copied!');">📋 Copy</button>
           </div>
           <div style="margin: 16px 0;">
-            <label style="font-size:11px; font-weight:800; color:#8E8E93;">PLAYERS IN ROOM:</label>
-            <div id="connected-players-list" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-              <span class="player-tag">ðŸŸ¢ ${esc(this.myName)} (You)</span>
+            <label style="font-size:11px; font-weight:800; color:#8E8E93;">PLAYERS CONNECTED:</label>
+            <div id="connected-players-list" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
+          </div>
+
+          ${isHost ? `
+            <h3 style="margin-top:20px;">Choose a Game (You are Host 👑)</h3>
+            <div class="games-grid-container">
+              <div class="game-card" onclick="App.launchGame('would-rather')"><span>🤔</span> <h4>Would You Rather</h4></div>
+              <div class="game-card" onclick="App.launchGame('this-or-that')"><span>⚖️</span> <h4>This or That</h4></div>
+              <div class="game-card" onclick="App.launchGame('red-green-flag')"><span>🚩</span> <h4>Red/Green Flag</h4></div>
+              <div class="game-card" onclick="App.launchGame('couple-compat')"><span>❤️</span> <h4>Compat Quiz</h4></div>
+              <div class="game-card" onclick="App.launchGame('blind-rank')"><span>🔢</span> <h4>Blind Rank</h4></div>
             </div>
-          </div>
-          <h3 style="margin-top:20px;">Select a Game</h3>
-          <div class="games-grid-container">
-            <div class="game-card" onclick="App.launchGame('would-rather')"><span>âš–ï¸</span> <h4>Would You Rather</h4></div>
-            <div class="game-card" onclick="App.launchGame('this-or-that')"><span>ðŸ”„</span> <h4>This or That</h4></div>
-            <div class="game-card" onclick="App.launchGame('red-green-flag')"><span>ðŸš©</span> <h4>Red/Green Flag</h4></div>
-            <div class="game-card" onclick="App.launchGame('couple-compat')"><span>ðŸ’–</span> <h4>Compat Quiz</h4></div>
-            <div class="game-card" onclick="App.launchGame('blind-rank')"><span>ðŸ™ˆ</span> <h4>Blind Rank</h4></div>
-            <div class="game-card" onclick="App.launchGame('truths-lie')"><span>ðŸ¤«</span> <h4>2 Truths 1 Lie</h4></div>
-            <div class="game-card" onclick="App.launchGame('guess-age')"><span>ðŸ“…</span> <h4>Guess The Year</h4></div>
-            <div class="game-card" onclick="App.launchGame('guess-number')"><span>ðŸ”¢</span> <h4>Guess Number</h4></div>
-          </div>
+          ` : `
+            <div style="padding:24px; text-align:center; background:#FAF9F7; border:1px solid #E8E6E3; border-radius:12px; margin-top:20px;">
+              <div class="spinner"></div>
+              <h4 style="margin-top:12px;">Waiting for Host to choose a game...</h4>
+              <p style="font-size:13px; color:#666;">Only the Host can start rounds. Get ready!</p>
+            </div>
+          `}
           <div id="debug-hud" style="margin-top:14px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">${esc(this.lastLog)}</div>
         </div>
       `;
@@ -265,25 +307,34 @@
     },
 
     async launchGame(gameId) {
+      if (!this.isHost()) {
+        alert("Only the Host can select or advance games.");
+        return;
+      }
       this.activeGame = gameId;
       this.gameState.choices = {};
       const banks = window.BANKS || {};
-      const picker = window.Picker;
+      const picker = window.Picker || {
+        nextItem: (k, arr) => (arr && arr.length) ? arr[Math.floor(Math.random() * arr.length)] : { a: "A", b: "B" },
+        freshBlindRankSet: () => ["Item 1", "Item 2", "Item 3", "Item 4", "Item 5"]
+      };
 
       if (gameId === "would-rather") this.gameState.currentPrompt = picker.nextItem("wouldRather", banks.wouldRather);
       if (gameId === "this-or-that") this.gameState.currentPrompt = picker.nextItem("thisOrThat", banks.thisOrThat);
       if (gameId === "red-green-flag") this.gameState.currentPrompt = picker.nextItem("redGreenFlag", banks.redGreenFlag);
       if (gameId === "couple-compat") this.gameState.currentPrompt = picker.nextItem("compatQuiz", banks.compatQuiz);
       if (gameId === "blind-rank") this.gameState.rankSet = picker.freshBlindRankSet(5);
-      if (gameId === "guess-number") this.gameState.secretNumber = picker.freshNumber(1, 100);
 
-      this.log("Launching: " + gameId);
+      this.log("Host launched: " + gameId);
       await this.pushDB();
       this.renderActiveGame();
-      window.scrollTo(0, 0);
     },
 
     async exitGame() {
+      if (!this.isHost()) {
+        alert("Only the Host can return the room to the lobby.");
+        return;
+      }
       this.activeGame = null;
       this.gameState.choices = {};
       await this.pushDB();
@@ -291,13 +342,9 @@
     },
 
     async submitChoice(val) {
-      if (!val || !val.toString().trim()) { alert("Please enter or select an answer."); return; }
-
-      await this.pollDB();
+      if (!val || !val.toString().trim()) return;
       this.gameState.choices = this.gameState.choices || {};
       this.gameState.choices[this.myId] = val.toString().trim();
-
-      this.log("Choice: " + val);
       await this.pushDB();
       this.renderActiveGame();
 
@@ -313,13 +360,14 @@
 
       let html = '<div class="comparison-bar">';
       keys.forEach(k => {
-        const name = (k === this.myId) ? "You" : ((this.gameState.players && this.gameState.players[k]) || "Partner");
+        const pObj = this.gameState.players && this.gameState.players[k];
+        const name = (k === this.myId) ? "You" : (pObj ? (pObj.name || pObj) : "Partner");
         html += `<div class="choice-row"><strong>${esc(name)}:</strong> <span>${esc(choices[k])}</span></div>`;
       });
       if (keys.length >= 2) {
         const vals = keys.map(k => choices[k]);
         const match = vals.every(v => v === vals[0]);
-        html += `<div style="text-align:center;font-weight:900;margin-top:10px;color:${match ? '#137333' : '#1A1A1A'};">${match ? 'ðŸŽ‰ MATCH!' : 'ðŸ¤ Different choices'}</div>`;
+        html += `<div style="text-align:center;font-weight:900;margin-top:10px;color:${match ? '#137333' : '#1A1A1A'};">${match ? '🎉 MATCH!' : '⚡ Different choices'}</div>`;
       }
       html += '</div>';
       return html;
@@ -339,6 +387,7 @@
       if (!c) return;
       if (!this.activeGame) { this.renderLobby(); return; }
 
+      const isHost = this.isHost();
       let body = "";
       const cur = this.gameState.currentPrompt || { a: "Option A", b: "Option B" };
       const myChoice = this.gameState.choices ? this.gameState.choices[this.myId] : null;
@@ -359,58 +408,60 @@
           body = `
             <h3>Red Flag or Green Flag?</h3>
             <p style="font-weight:700;margin:16px 0;">"${esc(cur)}"</p>
-            <button class="btn-choice ${myChoice === 'ðŸŸ¢ Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('ðŸŸ¢ Green Flag')">ðŸŸ¢ Green Flag</button>
-            <button class="btn-choice ${myChoice === 'ðŸš© Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('ðŸš© Red Flag')">ðŸš© Red Flag</button>
+            <button class="btn-choice ${myChoice === '🚩 Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('🚩 Red Flag')">🚩 Red Flag</button>
+            <button class="btn-choice ${myChoice === '🌿 Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('🌿 Green Flag')">🌿 Green Flag</button>
           `;
           break;
         case "couple-compat":
           body = `
             <h3>Compatibility Quiz</h3>
             <p style="font-weight:700;margin:16px 0;">${esc(cur)}</p>
-            <button class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')">ðŸ™‹â€â™‚ï¸ Definitely Me</button>
-            <button class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')">ðŸ™‹â€â™€ï¸ Definitely Partner</button>
+            <button class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')">🙋‍♂️ Definitely Me</button>
+            <button class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')">🙋‍♀️ Definitely Partner</button>
           `;
           break;
         case "blind-rank":
           const rankSet = this.gameState.rankSet || [];
           body = `
             <h3>Blind Ranking</h3>
-            <p style="font-size:13px;color:#666;margin-bottom:10px;">Rank these items:</p>
-            ${rankSet.map((item, i) => `<div style="background:#FAF9F7;border:1px solid #E8E6E3;padding:10px;border-radius:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
-              <span>${i+1}. ${esc(item)}</span>
-              <button class="btn-secondary" style="width:auto;min-height:34px;padding:4px 10px;font-size:12px;" onclick="App.submitChoice('Ranked #${i+1}: ${esc(item)}')">Rank #${i+1}</button>
-            </div>`).join("")}
+            <p style="font-size:13px;color:#666;margin-bottom:10px;">Select your ranking:</p>
+            ${rankSet.map((item, i) => `
+              <div style="background:#FAF9F7;border:1px solid #E8E6E3;padding:10px;border-radius:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+                <span>${i+1}. ${esc(item)}</span>
+                <button class="btn-secondary" style="width:auto;min-height:34px;padding:4px 10px;font-size:12px;" onclick="App.submitChoice('Rank #${i+1}: ${esc(item)}')">Rank #${i+1}</button>
+              </div>
+            `).join("")}
           `;
           break;
         default:
-          body = `<h3>${esc(this.activeGame)}</h3><p>Game active. Submit your answer below.</p>
-          <input id="ans-input" class="game-input" placeholder="Type answer..." />
-          <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('ans-input').value)">Submit</button>`;
+          body = `<p>Game active.</p>`;
       }
 
       c.innerHTML = `
         <div class="active-game-wrapper">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="App.exitGame()">â† Lobby</button>
+            ${isHost ? `
+              <button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="App.exitGame()">← Lobby</button>
+            ` : `
+              <span style="font-size:12px;color:#8E8E93;font-weight:700;">Host controls the session</span>
+            `}
             <span style="font-weight:900;font-size:11px;letter-spacing:1px;color:#8E8E93;">ACTIVE GAME</span>
           </div>
           ${body}
-          ${this.renderComparison()}
-          <div style="display:flex;gap:8px;margin-top:16px;">
-            <button class="btn-primary" style="flex:1;" onclick="App.pollDB(); alert('Synced!');">ðŸ”„ Force Sync</button>
-            <button class="btn-action" style="flex:1;" onclick="App.launchGame('${this.activeGame}')">Next Round â†’</button>
-          </div>
+          ${this.renderComparison()}${isHost ? `
+            <button class="btn-action" style="margin-top:16px;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
+          ` : `
+            <p style="font-size:12px;color:#888;margin-top:12px;text-align:center;">Waiting for Host to advance to next round...</p>
+          `}
           <div id="debug-hud" style="margin-top:14px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">${esc(this.lastLog)}</div>
         </div>
       `;
     }
   };
 
-  document.addEventListener("DOMContentLoaded", () => {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => window.App.init());
+  } else {
     window.App.init();
-  });
+  }
 })();
-
-
-
-
