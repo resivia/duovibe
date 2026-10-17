@@ -1,39 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#FAF9F7" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="DuoVibe" />
-  <title>DuoVibe ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã¢â‚¬Â¢ Real-Time Couple Games</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="features.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã¢â‚¬Â¢</text></svg>" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>DuoVibe - Long Distance Couple Games</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="features.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 </head>
 <body>
-  <header class="nav-bar">
-    <div class="nav-inner">
-      <div class="nav-brand" onclick="App.renderHome()">
-        <div class="nav-logo">ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã¢â‚¬Â¢</div>
+  <div id="app">
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="logo-icon">💕</span>
         <div>
-          <div class="nav-title">DuoVibe</div>
-          <div class="nav-subtitle">Couple Edition</div>
+          <h1 class="logo-text">DuoVibe</h1>
+          <span class="tagline">COUPLE EDITION</span>
         </div>
       </div>
-      <div id="conn-status" class="status-badge offline">ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ OFFLINE</div>
-    </div>
-  </header>
+      <div class="header-actions">
+        <span id="conn-status" class="status-badge offline">OFFLINE</span>
+        <button id="btn-call-toggle" class="icon-btn" title="Voice/Video Call" onclick="window.Features && window.Features.toggleCallWidget()">📞 Call</button>
+      </div>
+    </header>
 
-  <main class="main-container" id="main-content">
-    <div class="loading-screen">
-      <div class="waiting-spinner"></div>
-      <p class="text-sm" style="color:#666;">Loading DuoVibe...</p>
-    </div>
-  </main>
+    <main id="main-content">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading DuoVibe...</p>
+      </div>
+    </main>
+  </div>
 
   <script src="config.js"></script>
   <script src="banks.js"></script>

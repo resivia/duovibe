@@ -1,6 +1,4 @@
 // DuoVibe Content Banks + Smart Shuffle Engine
-// Ensures no repeats until a full bank cycle completes
-
 window.BANKS = {
   wouldRather: [
     { a: "Always be 10 minutes late", b: "Always be 20 minutes early" },
@@ -47,21 +45,21 @@ window.BANKS = {
 
   thisOrThat: [
     { a: "☕ Coffee", b: "🍵 Tea" },
-    { a: "🌙 Night Owl", b: "☀️ Early Bird" },
+    { a: "🌙 Night Owl", b: "🌅 Early Bird" },
     { a: "🍕 Pizza", b: "🍔 Burger" },
     { a: "🏖️ Beach", b: "⛰️ Mountains" },
     { a: "🐶 Dogs", b: "🐱 Cats" },
     { a: "📱 iPhone", b: "🤖 Android" },
     { a: "🎬 Movies", b: "📺 TV Shows" },
-    { a: "🍫 Sweet", b: "🧂 Salty" },
-    { a: "🌞 Summer", b: "❄️ Winter" },
+    { a: "🍫 Sweet", b: "🍿 Salty" },
+    { a: "☀️ Summer", b: "❄️ Winter" },
     { a: "📖 Book", b: "🎧 Audiobook" },
     { a: "🚗 Road Trip", b: "✈️ Flight" },
     { a: "🎮 Video Games", b: "🎲 Board Games" },
     { a: "🥗 Salad", b: "🍟 Fries" },
     { a: "💧 Still Water", b: "🫧 Sparkling Water" },
-    { a: "🎨 Art Museum", b: "🏟️ Sports Game" },
-    { a: "🌃 City Lights", b: "🌌 Starry Sky" },
+    { a: "🎨 Art Museum", b: "⚽ Sports Game" },
+    { a: "🌆 City Lights", b: "🌌 Starry Sky" },
     { a: "🍺 Beer", b: "🍷 Wine" },
     { a: "🎤 Karaoke", b: "💃 Dancing" },
     { a: "📸 Photos", b: "🎥 Videos" },
@@ -73,19 +71,19 @@ window.BANKS = {
     { a: "🍦 Ice Cream", b: "🍰 Cake" },
     { a: "🛁 Bath", b: "🚿 Shower" },
     { a: "🌮 Tacos", b: "🍣 Sushi" },
-    { a: "🎸 Rock", b: "🎹 Pop" },
+    { a: "🎸 Rock", b: "🎤 Pop" },
     { a: "🌹 Roses", b: "🌻 Sunflowers" },
     { a: "⚽ Soccer", b: "🏀 Basketball" },
-    { a: "🥂 New Year's", b: "🎃 Halloween" },
-    { a: "🧳 Pack Light", b: "🧳 Pack Everything" },
-    { a: "📝 Plan Ahead", b: "🎲 Go With Flow" },
-    { a: "🤫 Introvert", b: "🎉 Extrovert" },
+    { a: "🎆 New Year's", b: "🎃 Halloween" },
+    { a: "🎒 Pack Light", b: "🧳 Pack Everything" },
+    { a: "📅 Plan Ahead", b: "🎲 Go With Flow" },
+    { a: "🏠 Introvert", b: "🎉 Extrovert" },
     { a: "🧊 Cold Drinks", b: "☕ Hot Drinks" },
-    { a: "🐠 Ocean", b: "🏞️ Lake" },
-    { a: "🎁 Give Gifts", b: "🎀 Receive Gifts" },
+    { a: "🌊 Ocean", b: "🏞️ Lake" },
+    { a: "🎁 Give Gifts", b: "💝 Receive Gifts" },
     { a: "💬 Text", b: "📞 Call" },
     { a: "🎢 Thrill Rides", b: "🎡 Chill Rides" },
-    { a: "🧂 Spicy Food", b: "🍯 Mild Food" }
+    { a: "🌶️ Spicy Food", b: "🥦 Mild Food" }
   ],
 
   redGreenFlag: [
@@ -358,28 +356,32 @@ window.BANKS = {
   ]
 };
 
-// Smart Shuffle Engine - tracks seen items so no repeats until bank cycle exhausts
 window.Picker = {
   nextItem(bankKey, bankArray) {
+    if (!bankArray || !bankArray.length) return null;
     const storageKey = 'duo_seen_' + bankKey;
-    let seen = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    
-    // Reset if we've seen them all
+    let seen = [];
+    try {
+      seen = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    } catch (e) {
+      seen = [];
+    }
+
     if (seen.length >= bankArray.length) {
       seen = [];
     }
-    
-    // Pick from unseen pool
+
     const unseen = bankArray.map((_, i) => i).filter(i => !seen.includes(i));
     const randomIdx = unseen[Math.floor(Math.random() * unseen.length)];
-    
+
     seen.push(randomIdx);
-    localStorage.setItem(storageKey, JSON.stringify(seen));
-    
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(seen));
+    } catch (e) {}
+
     return bankArray[randomIdx];
   },
 
-  // Dynamic generators for games where every round is fresh by design
   freshNumber(min = 1, max = 100) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   },
