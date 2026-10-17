@@ -22,15 +22,6 @@
     return s.replace(/[^a-z0-9]/g, "");
   }
 
-  function initSupabase() {
-    var cfg = window.CONFIG || {};
-    var url = cfg.SUPABASE_URL || "https://euqrzxxldlsbhuyjuleo.supabase.co";
-    var key = cfg.SUPABASE_ANON_KEY || "";
-    if (window.supabase && url && key) {
-      window.sb = window.supabase.createClient(url, key);
-    }
-  }
-
   function forceScroll() {
     document.documentElement.style.height = "auto";
     document.documentElement.style.overflowY = "auto";
@@ -38,6 +29,96 @@
     document.body.style.overflowY = "auto";
     document.body.style.position = "static";
     document.body.style.touchAction = "pan-y";
+  }
+
+  function initSupabase() {
+    var cfg = window.CONFIG || {};
+    var url =
+      cfg.SUPABASE_URL ||
+      cfg.supabaseUrl ||
+      window.SUPABASE_URL ||
+      (typeof SUPABASE_URL !== "undefined" ? SUPABASE_URL : "") ||
+      "https://euqrzxxldlsbhuyjuleo.supabase.co";
+
+    var key =
+      cfg.SUPABASE_ANON_KEY ||
+      cfg.supabaseAnonKey ||
+      window.SUPABASE_ANON_KEY ||
+      (typeof SUPABASE_ANON_KEY !== "undefined" ? SUPABASE_ANON_KEY : "");
+
+    if (window.supabase && url && key) {
+      window.sb = window.supabase.createClient(url, key);
+    }
+  }
+
+  function ensureBanks() {
+    window.BANKS = window.BANKS || {};
+
+    if (!Array.isArray(window.BANKS.wouldRather)) {
+      window.BANKS.wouldRather = [
+        { a: "Call every night", b: "Text all day" },
+        { a: "Beach date", b: "City date" }
+      ];
+    }
+
+    if (!Array.isArray(window.BANKS.thisOrThat)) {
+      window.BANKS.thisOrThat = [
+        { a: "Coffee", b: "Tea" },
+        { a: "Movies", b: "TV Shows" }
+      ];
+    }
+
+    if (!Array.isArray(window.BANKS.redGreenFlag)) {
+      window.BANKS.redGreenFlag = [
+        "Sends good morning texts",
+        "Never apologizes first"
+      ];
+    }
+
+    if (!Array.isArray(window.BANKS.compatQuiz)) {
+      window.BANKS.compatQuiz = [
+        "Who is more romantic?",
+        "Who falls asleep first?"
+      ];
+    }
+
+    if (!Array.isArray(window.BANKS.blindRankItems)) {
+      window.BANKS.blindRankItems = [
+        "Movie Night",
+        "Road Trip",
+        "Dinner Date",
+        "Beach Sunset",
+        "Concert Tickets"
+      ];
+    }
+
+    if (!Array.isArray(window.BANKS.letterPrompts)) {
+      window.BANKS.letterPrompts = [
+        { category: "Animals", letter: "B" },
+        { category: "Foods", letter: "P" }
+      ];
+    }
+
+    if (!Array.isArray(window.BANKS.bombCategories)) {
+      window.BANKS.bombCategories = [
+        "Things in a kitchen",
+        "Fruits"
+      ];
+    }
+
+    if (!Array.isArray(window.BANKS.guessAge)) {
+      window.BANKS.guessAge = [
+        { subject: "Year Instagram launched", answer: 2010 },
+        { subject: "Year the iPhone 1 was released", answer: 2007 }
+      ];
+    }
+
+    if (!Array.isArray(window.BANKS.guessCeleb)) {
+      window.BANKS.guessCeleb = [
+        { clues: ["Nigerian Afrobeats star", "Known as Starboy"], answer: "Wizkid" },
+        { clues: ["Barbadian singer", "Started Fenty Beauty"], answer: "Rihanna" }
+      ];
+    }
   }
 
   var GAMES = [
@@ -69,10 +150,13 @@
     state: null,
     channel: null,
     peers: {},
+    isSubscribed: false,
+    pendingSends: [],
     bombTimer: null,
 
     init: function () {
       forceScroll();
+      ensureBanks();
       localStorage.setItem("duo_my_id", this.myId);
       initSupabase();
       this.updateStatus(window.sb ? "online" : "offline", window.sb ? "ONLINE" : "LOCAL");
@@ -127,15 +211,19 @@
       this.saveName();
       var input = document.getElementById("input-room-code");
       var code = input ? input.value.replace(/\D/g, "") : "";
+
       if (code.length !== 6) {
         alert("Please enter a valid 6-digit room code.");
         return;
       }
+
       this.joinRoom(code);
     },
 
     joinRoom: function (code) {
       this.roomCode = code;
+      this.activeGame = null;
+      this.state = null;
       this.renderLobby();
 
       if (!window.sb) initSupabase();
@@ -150,8 +238,10 @@
       }
 
       var self = this;
+      this.isSubscribed = false;
+      this.pendingSends = [];
 
-      this.channel = window.sb.channel("room_" + code, {
+      this.channel = window.sb.channel("duovibe_room_" + code, {
         config: {
           presence: { key: self.myId },
           broadcast: { self: false }
@@ -164,40 +254,48 @@
           var count = self.players().length;
           self.updateStatus("live", "LIVE " + count);
           self.renderPlayers();
-          if (self.activeGame) self.renderGame(false);
+
+          if (self.activeGame && self.state) {
+            setTimeout(function () {
+              self.broadcastFullState(false);
+            }, 250);
+          }
         })
         .on("broadcast", { event: "game_update" }, function (msg) {
           var data = msg.payload || {};
           if (data.sender === self.myId) return;
-
-          if (data.activeGame !== undefined) self.activeGame = data.activeGame;
-          if (data.state !== undefined) self.state = data.state;
-
-          if (self.activeGame && self.state) {
-            self.renderGame(false);
-          } else {
-            self.renderLobby();
-          }
+          self.handleIncomingGameUpdate(data);
         })
         .on("broadcast", { event: "state_request" }, function (msg) {
           var data = msg.payload || {};
-          if (data.sender !== self.myId && self.activeGame && self.state) {
-            self.broadcastFullState();
+          if (data.sender === self.myId) return;
+
+          if (self.activeGame && self.state) {
+            self.broadcastFullState(true);
           }
         })
         .subscribe(function (status) {
           if (status === "SUBSCRIBED") {
+            self.isSubscribed = true;
+            self.updateStatus("live", "LIVE " + self.players().length);
+
             self.channel.track({
               id: self.myId,
               name: self.myName,
               onlineAt: new Date().toISOString()
             });
 
-            self.channel.send({
-              type: "broadcast",
-              event: "state_request",
-              payload: { sender: self.myId }
-            });
+            self.flushPendingSends();
+
+            setTimeout(function () {
+              self.safeSend("state_request", { needState: true });
+            }, 350);
+
+            if (self.activeGame && self.state) {
+              setTimeout(function () {
+                self.broadcastFullState(true);
+              }, 500);
+            }
           }
         });
     },
@@ -205,6 +303,7 @@
     players: function () {
       var out = [];
       var seen = {};
+
       out.push({ id: this.myId, name: this.myName });
       seen[this.myId] = true;
 
@@ -212,8 +311,10 @@
       Object.keys(peers).forEach(function (key) {
         var arr = peers[key];
         if (!arr || !arr[0]) return;
+
         var id = arr[0].id || key;
         var name = arr[0].name || "Player";
+
         if (!seen[id]) {
           out.push({ id: id, name: name });
           seen[id] = true;
@@ -226,6 +327,7 @@
     renderPlayers: function () {
       var el = document.getElementById("connected-players-list");
       if (!el) return;
+
       el.innerHTML = this.players().map(function (p) {
         return '<span class="player-tag"><span class="online-dot"></span>' + esc(p.name) + '</span>';
       }).join("");
@@ -269,6 +371,7 @@
 
     copyRoom: function () {
       var code = this.roomCode || "";
+
       if (navigator.clipboard) {
         navigator.clipboard.writeText(code).then(function () {
           alert("Room code copied: " + code);
@@ -280,17 +383,158 @@
       }
     },
 
-    broadcastFullState: function () {
-      if (!this.channel) return;
+    safeSend: function (eventName, payload) {
+      payload = payload || {};
+      payload.sender = this.myId;
+      payload.sentAt = Date.now();
+
+      if (!this.channel || !this.isSubscribed) {
+        this.pendingSends.push({
+          eventName: eventName,
+          payload: clone(payload)
+        });
+        return;
+      }
+
       this.channel.send({
         type: "broadcast",
-        event: "game_update",
-        payload: {
-          sender: this.myId,
-          activeGame: this.activeGame,
-          state: this.state
+        event: eventName,
+        payload: clone(payload)
+      });
+    },
+
+    flushPendingSends: function () {
+      if (!this.channel || !this.isSubscribed) return;
+
+      var sends = this.pendingSends.slice();
+      this.pendingSends = [];
+
+      for (var i = 0; i < sends.length; i++) {
+        this.channel.send({
+          type: "broadcast",
+          event: sends[i].eventName,
+          payload: sends[i].payload
+        });
+      }
+    },
+
+    broadcastFullState: function (retry) {
+      this.safeSend("game_update", {
+        activeGame: this.activeGame,
+        state: this.state ? clone(this.state) : null
+      });
+
+      if (retry) {
+        var self = this;
+        setTimeout(function () {
+          self.safeSend("game_update", {
+            activeGame: self.activeGame,
+            state: self.state ? clone(self.state) : null
+          });
+        }, 450);
+
+        setTimeout(function () {
+          self.safeSend("game_update", {
+            activeGame: self.activeGame,
+            state: self.state ? clone(self.state) : null
+          });
+        }, 1200);
+      }
+    },
+
+    handleIncomingGameUpdate: function (data) {
+      var incomingGame = data.activeGame;
+      var incomingState = data.state ? clone(data.state) : null;
+
+      if (incomingGame === null) {
+        this.activeGame = null;
+        this.state = null;
+        this.renderLobby();
+        return;
+      }
+
+      if (!incomingGame || !incomingState) return;
+
+      if (!this.state || !this.activeGame) {
+        this.activeGame = incomingGame;
+        this.state = incomingState;
+        this.renderGame(false);
+        return;
+      }
+
+      if (this.activeGame !== incomingGame) {
+        var localCreatedA = this.state.createdAt || 0;
+        var incomingCreatedA = incomingState.createdAt || 0;
+
+        if (incomingCreatedA >= localCreatedA) {
+          this.activeGame = incomingGame;
+          this.state = incomingState;
+          this.renderGame(false);
+        }
+
+        return;
+      }
+
+      var localRound = this.state.round || 1;
+      var incomingRound = incomingState.round || 1;
+
+      if (incomingRound > localRound) {
+        this.state = incomingState;
+        this.renderGame(false);
+        return;
+      }
+
+      if (incomingRound < localRound) {
+        return;
+      }
+
+      var localRoundId = this.state.roundId || "";
+      var incomingRoundId = incomingState.roundId || "";
+
+      if (localRoundId && incomingRoundId && localRoundId !== incomingRoundId) {
+        var localCreatedB = this.state.createdAt || 0;
+        var incomingCreatedB = incomingState.createdAt || 0;
+
+        if (incomingCreatedB >= localCreatedB) {
+          this.state = incomingState;
+          this.renderGame(false);
+        }
+
+        return;
+      }
+
+      this.state = this.mergeSameRoundState(this.state, incomingState);
+      this.renderGame(false);
+    },
+
+    mergeSameRoundState: function (localState, incomingState) {
+      var merged = clone(localState);
+      var localChoices = merged.choices || {};
+      var incomingChoices = incomingState.choices || {};
+
+      Object.keys(incomingChoices).forEach(function (playerId) {
+        var incomingChoice = incomingChoices[playerId];
+        var localChoice = localChoices[playerId];
+
+        if (!localChoice || (incomingChoice.at || 0) >= (localChoice.at || 0)) {
+          localChoices[playerId] = incomingChoice;
         }
       });
+
+      merged.choices = localChoices;
+      merged.revealed = !!(localState.revealed || incomingState.revealed);
+      merged.clueIdx = Math.max(localState.clueIdx || 0, incomingState.clueIdx || 0);
+      merged.updatedAt = Math.max(localState.updatedAt || 0, incomingState.updatedAt || 0, Date.now());
+
+      if (!merged.prompt && incomingState.prompt) {
+        merged.prompt = incomingState.prompt;
+      }
+
+      if (!merged.used && incomingState.used) {
+        merged.used = incomingState.used;
+      }
+
+      return merged;
     },
 
     pickFromBank: function (bankKey, bank, used) {
@@ -300,7 +544,9 @@
 
       var seen = Array.isArray(used[bankKey]) ? used[bankKey].slice() : [];
 
-      if (seen.length >= bank.length) seen = [];
+      if (seen.length >= bank.length) {
+        seen = [];
+      }
 
       var unseen = [];
       for (var i = 0; i < bank.length; i++) {
@@ -329,15 +575,19 @@
 
     createRoundState: function (gameId, round) {
       var previousUsed = this.state && this.state.used ? clone(this.state.used) : {};
+      var now = Date.now();
+
       var state = {
         gameId: gameId,
         round: round || 1,
+        roundId: gameId + "_" + now + "_" + Math.random().toString(36).slice(2, 7),
         prompt: null,
         choices: {},
         revealed: false,
         clueIdx: 0,
         used: previousUsed,
-        createdAt: Date.now()
+        createdAt: now,
+        updatedAt: now
       };
 
       if (gameId === "would-rather") {
@@ -378,7 +628,7 @@
     launchGame: function (gameId) {
       this.activeGame = gameId;
       this.state = this.createRoundState(gameId, 1);
-      this.broadcastFullState();
+      this.broadcastFullState(true);
       this.renderGame(true);
     },
 
@@ -386,7 +636,7 @@
       if (!this.activeGame) return;
       var next = this.state ? (this.state.round + 1) : 1;
       this.state = this.createRoundState(this.activeGame, next);
-      this.broadcastFullState();
+      this.broadcastFullState(true);
       this.renderGame(true);
     },
 
@@ -394,7 +644,7 @@
       this.activeGame = null;
       this.state = null;
       this.stopBombTimer();
-      this.broadcastFullState();
+      this.broadcastFullState(true);
       this.renderLobby();
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
@@ -442,6 +692,7 @@
 
     setChoice: function (value) {
       if (!this.state) return;
+
       if (value == null || value === "") {
         alert("Enter an answer first.");
         return;
@@ -455,7 +706,8 @@
         at: Date.now()
       };
 
-      this.broadcastFullState();
+      this.state.updatedAt = Date.now();
+      this.broadcastFullState(true);
       this.renderGame(false);
 
       if (Object.keys(this.state.choices).length >= 2 && window.confetti) {
@@ -478,7 +730,8 @@
     reveal: function () {
       if (!this.state) return;
       this.state.revealed = true;
-      this.broadcastFullState();
+      this.state.updatedAt = Date.now();
+      this.broadcastFullState(true);
       this.renderGame(false);
     },
 
@@ -551,6 +804,7 @@
       var rows = items.map(function (item, i) {
         var opts = '<option value="">Rank</option>';
         for (var r = 1; r <= items.length; r++) opts += '<option value="' + r + '">' + r + '</option>';
+
         return '<div class="rank-row">' +
           '<span>' + esc(item) + '</span>' +
           '<select id="rank-' + i + '" class="rank-select">' + opts + '</select>' +
@@ -594,7 +848,9 @@
 
       this.setChoice({
         kind: "ranking",
-        items: ranked.map(function (x) { return x.rank + ". " + x.item; })
+        items: ranked.map(function (x) {
+          return x.rank + ". " + x.item;
+        })
       });
     },
 
@@ -620,13 +876,16 @@
 
     submitTruthsLie: function () {
       var statements = [];
+
       for (var i = 0; i < 3; i++) {
         var el = document.getElementById("stmt-" + i);
         var v = el ? el.value.trim() : "";
+
         if (!v) {
           alert("Fill all three statements.");
           return;
         }
+
         statements.push(v);
       }
 
@@ -688,6 +947,7 @@
     submitBomb: function () {
       var el = document.getElementById("bomb-input");
       var value = el ? el.value.trim() : "";
+
       if (!value) {
         alert("Type an answer first.");
         return;
@@ -703,8 +963,10 @@
 
       function tick() {
         if (!self.state || !self.state.prompt || !self.state.prompt.endsAt) return;
+
         var el = document.getElementById("bomb-timer");
         if (!el) return;
+
         var left = Math.max(0, Math.ceil((self.state.prompt.endsAt - Date.now()) / 1000));
         el.textContent = left;
         el.className = left <= 5 ? "bomb-timer danger" : "bomb-timer";
@@ -740,10 +1002,12 @@
     submitYear: function () {
       var el = document.getElementById("year-input");
       var val = el ? parseInt(el.value, 10) : NaN;
+
       if (isNaN(val) || val < 1000 || val > 2100) {
         alert("Enter a valid year.");
         return;
       }
+
       this.setChoice(String(val));
     },
 
@@ -777,10 +1041,12 @@
     submitNumber: function () {
       var el = document.getElementById("number-input");
       var val = el ? parseInt(el.value, 10) : NaN;
+
       if (isNaN(val) || val < 1 || val > 100) {
         alert("Enter a number from 1 to 100.");
         return;
       }
+
       this.setChoice(String(val));
     },
 
@@ -814,9 +1080,12 @@
 
     nextClue: function () {
       if (!this.state || !this.state.prompt) return;
+
       var max = (this.state.prompt.clues || []).length - 1;
       this.state.clueIdx = Math.min(max, (this.state.clueIdx || 0) + 1);
-      this.broadcastFullState();
+      this.state.updatedAt = Date.now();
+
+      this.broadcastFullState(true);
       this.renderGame(false);
     },
 
@@ -837,6 +1106,7 @@
 
       for (var i = 0; i < keys.length; i++) {
         var entry = choices[keys[i]];
+
         html += '<div class="answer-card">' +
           '<span class="answer-name">' + esc(entry.name || "Player") + '</span>' +
           '<div class="answer-value">' + this.formatAnswer(entry.value) + '</div>' +
@@ -865,6 +1135,7 @@
 
       if (value && typeof value === "object" && value.kind === "truths-lie") {
         var showLie = this.state && this.state.revealed;
+
         return '<ol class="truth-list">' + value.statements.map(function (s, i) {
           var lie = showLie && i === value.lieIndex;
           return '<li class="' + (lie ? "lie-mark" : "") + '">' + esc(s) + (lie ? " - LIE" : "") + '</li>';
@@ -876,12 +1147,14 @@
 
     answerMeta: function (value) {
       if (!this.state || !this.state.prompt) return "";
+
       var id = this.activeGame;
       var p = this.state.prompt;
 
       if (id === "guess-number") {
         var n = parseInt(value, 10);
         if (isNaN(n)) return "";
+
         var hint = n === p.answer ? "Correct" : (n < p.answer ? "Higher" : "Lower");
         return '<div class="answer-meta">' + esc(hint) + '</div>';
       }
@@ -889,6 +1162,7 @@
       if (id === "guess-age" && this.state.revealed) {
         var y = parseInt(value, 10);
         if (isNaN(y)) return "";
+
         var diff = Math.abs(y - parseInt(p.answer, 10));
         return '<div class="answer-meta">Off by ' + diff + '</div>';
       }
@@ -903,17 +1177,20 @@
 
     roundSummary: function (keys, choices) {
       if (keys.length < 2) return "";
+
       var id = this.activeGame;
 
       if (id === "would-rather" || id === "this-or-that" || id === "red-green-flag" || id === "couple-compat") {
         var first = String(choices[keys[0]].value);
         var match = true;
+
         for (var i = 1; i < keys.length; i++) {
           if (String(choices[keys[i]].value) !== first) {
             match = false;
             break;
           }
         }
+
         return '<div class="' + (match ? "match-banner" : "diff-banner") + '">' + (match ? "MATCH" : "Different answers") + '</div>';
       }
 
@@ -925,8 +1202,10 @@
         keys.forEach(function (k) {
           var entry = choices[k];
           var guess = parseInt(entry.value, 10);
+
           if (!isNaN(guess)) {
             var diff = Math.abs(guess - answer);
+
             if (diff < bestDiff) {
               bestDiff = diff;
               bestName = entry.name;
@@ -934,7 +1213,9 @@
           }
         });
 
-        if (bestName) return '<div class="match-banner">Closest: ' + esc(bestName) + '</div>';
+        if (bestName) {
+          return '<div class="match-banner">Closest: ' + esc(bestName) + '</div>';
+        }
       }
 
       if (id === "guess-celeb" && this.state.revealed) {
@@ -943,10 +1224,16 @@
 
         keys.forEach(function (k) {
           var entry = choices[k];
-          if (normalizeText(entry.value) === normalizeText(answerText)) correct.push(entry.name);
+
+          if (normalizeText(entry.value) === normalizeText(answerText)) {
+            correct.push(entry.name);
+          }
         });
 
-        if (correct.length) return '<div class="match-banner">Correct: ' + esc(correct.join(", ")) + '</div>';
+        if (correct.length) {
+          return '<div class="match-banner">Correct: ' + esc(correct.join(", ")) + '</div>';
+        }
+
         return '<div class="diff-banner">No correct guesses this round</div>';
       }
 
