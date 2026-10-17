@@ -1,44 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#FAF9F7">
-  <title>DuoVibe - Couple & Group Games</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="features.css">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0,user-scalable=yes,viewport-fit=cover">
+<title>DuoVibe - Real-Time Couple & Group Games</title>
+<meta name="description" content="Play real-time couple and group social games together.">
+<link rel="stylesheet" href="style.css?v=final-db">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 </head>
 <body>
-  <div id="app">
-    <header class="app-header">
-      <div class="logo-area">
-        <div class="logo-mark">DV</div>
-        <div>
-          <h1 class="logo-text">DuoVibe</h1>
-          <span class="tagline">COUPLE EDITION</span>
-        </div>
-      </div>
-
-      <div class="header-actions">
-        <span id="conn-status" class="status-badge offline">OFFLINE</span>
-        <button id="btn-call-toggle" class="icon-btn" type="button" onclick="window.Features && window.Features.toggleCallWidget()">📞 Call</button>
-      </div>
-    </header>
-
-    <main id="main-content">
-      <div class="loading-state">
-        <div class="spinner"></div>
-        <p>Loading DuoVibe...</p>
-      </div>
-    </main>
-  </div>
-
-  <script src="config.js"></script>
-  <script src="banks.js"></script>
-  <script src="app.js"></script>
-  <script src="features.js"></script>
+<div id="app">
+<header class="app-header">
+<div class="logo-area"><span class="logo-mark">DV</span><div><h1 class="logo-text">DuoVibe</h1><span class="tagline">COUPLE EDITION</span></div></div>
+<div class="header-actions">
+<span id="conn-status" class="status-badge offline">OFFLINE</span>
+<button id="btn-call-toggle" class="icon-btn" onclick="window.Features && window.Features.toggleCallWidget()">📞 Call</button>
+</div>
+</header>
+<main id="main-content">
+<div class="loading-state"><div class="spinner"></div><p>Loading DuoVibe...</p></div>
+</main>
+</div>
+<script src="config.js?v=final-db"></script>
+<script src="banks.js?v=final-db"></script>
+<script src="app.js?v=final-db"></script>
+<script src="features.js?v=final-db"></script>
 </body>
 </html>
