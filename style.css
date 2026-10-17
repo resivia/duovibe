@@ -1,17 +1,17 @@
 *{box-sizing:border-box;margin:0;padding:0;font-family:"Plus Jakarta Sans",system-ui,sans-serif;-webkit-tap-highlight-color:transparent;}
 html,body{min-height:100% !important;height:auto !important;background:#FAF9F7;color:#1A1A1A;overflow-x:hidden !important;overflow-y:auto !important;touch-action:pan-y;-webkit-text-size-adjust:100%;}
-body{padding-bottom:140px;}
+body{padding-bottom:160px;}
 #app{max-width:600px;margin:0 auto;min-height:100vh;}
 .app-header{position:sticky;top:0;z-index:1000;background:rgba(250,249,247,0.92);backdrop-filter:blur(14px);border-bottom:1px solid #E8E6E3;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
 .logo-area{display:flex;align-items:center;gap:10px;}
-.logo-mark{width:42px;height:42px;border-radius:12px;background:#1A1A1A;color:#FAF9F7;font-weight:900;font-size:16px;display:grid;place-items:center;letter-spacing:-1px;}
-.logo-text{font-size:20px;font-weight:900;letter-spacing:-1px;line-height:1;}
-.tagline{font-size:10px;color:#8E8E93;font-weight:800;letter-spacing:1px;}
+.logo-mark{width:42px;height:42px;border-radius:12px;background:#1A1A1A;color:#FAF9F7;font-weight:900;font-size:16px;display:grid;place-items:center;}
+.logo-text{font-size:20px;font-weight:900;letter-spacing:-1px;}
+.tagline{font-size:10px;color:#8E8E93;font-weight:800;}
 .header-actions{display:flex;align-items:center;gap:8px;}
-.status-badge{font-size:11px;font-weight:800;padding:6px 10px;border-radius:20px;letter-spacing:0.8px;}
+.status-badge{font-size:11px;font-weight:800;padding:6px 10px;border-radius:20px;}
 .status-badge.online,.status-badge.live{background:#E6F4EA;color:#137333;}
 .status-badge.offline{background:#FDEAEA;color:#A52A2A;}
-.icon-btn{background:#1A1A1A;color:#FAF9F7;border:none;border-radius:20px;font-weight:800;font-size:13px;padding:8px 14px;min-height:44px;}
+.icon-btn{background:#1A1A1A;color:#fff;border:none;border-radius:20px;font-weight:800;font-size:13px;padding:8px 14px;min-height:44px;}
 #main-content{padding:18px;}
 .home-card,.lobby-card,.dilemma-card{background:#fff;border:1px solid #E8E6E3;border-radius:24px;padding:22px;box-shadow:0 6px 30px rgba(0,0,0,0.04);}
 .home-card h2,.lobby-card h3,.dilemma-card h3{font-size:22px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;}
@@ -29,13 +29,12 @@ body{padding-bottom:140px;}
 .room-label{font-size:11px;font-weight:900;color:#8E8E93;letter-spacing:1px;}
 .room-code-display{font-size:26px;font-weight:900;letter-spacing:2px;}
 .player-tag{display:inline-flex;align-items:center;gap:6px;background:#E6F4EA;color:#137333;font-weight:800;font-size:12px;padding:6px 10px;border-radius:20px;}
-.games-grid-container{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px;margin-top:16px;}
-.game-card{background:#FAF9F7;border:1px solid #E8E6E3;border-radius:16px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer;transition:transform 0.1s ease,border-color 0.1s ease;}
-.game-card:active{transform:scale(0.98);border-color:#1A1A1A;}
+.games-grid-container{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px;}
+.game-card{background:#FAF9F7;border:1px solid #E8E6E3;border-radius:16px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer;}
+.game-card h4{font-size:15px;font-weight:700;margin-top:8px;}
 .comparison-bar{margin-top:16px;background:#FAF9F7;border:1px solid #E8E6E3;padding:14px 16px;border-radius:14px;}
-.choice-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:14px;border-bottom:1px solid #E8E6E3;}
+.choice-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid #E8E6E3;}
 .choice-row:last-child{border-bottom:none;}
-@media(max-width:380px){.games-grid-container{grid-template-columns:1fr;}}
 .loading-state{min-height:40vh;display:grid;place-items:center;text-align:center;color:#666;}
 .spinner{width:36px;height:36px;border-radius:999px;border:3px solid #E8E6E3;border-top-color:#1A1A1A;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
 @keyframes spin{to{transform:rotate(360deg);}}

@@ -1,26 +1,10 @@
-window.Features = window.Features || {};
-
-window.Features.toggleCallWidget = function () {
-  var existing = document.getElementById("duo-call-overlay");
-  if (existing) {
-    existing.remove();
-    return;
+window.Features = {
+  toggleCallWidget: function() {
+    var el = document.getElementById("call-widget");
+    if (el) { el.remove(); return; }
+    var widget = document.createElement("div");
+    widget.id = "call-widget";
+    widget.innerHTML = '<div style="position:fixed;bottom:100px;right:16px;width:300px;height:220px;background:#fff;border:1px solid #E8E6E3;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.15);z-index:99999;padding:12px;"><strong>Call (Jitsi)</strong><br><iframe src="https://meet.jit.si/DuoVibeRoom" style="width:100%;height:160px;border:0;border-radius:8px;" allow="camera;microphone" title="Call"></iframe></div>';
+    document.body.appendChild(widget);
   }
-
-  var room = "DuoVibeRoom";
-  try {
-    if (window.App && window.App.roomCode) room = "DuoVibe_" + window.App.roomCode;
-  } catch (e) {}
-
-  var overlay = document.createElement("div");
-  overlay.id = "duo-call-overlay";
-  overlay.className = "duo-call-overlay";
-  overlay.innerHTML =
-    '<div class="duo-call-header">' +
-      '<strong>Voice / Video Call</strong>' +
-      '<button onclick="window.Features.toggleCallWidget()">Close</button>' +
-    '</div>' +
-    '<iframe title="DuoVibe Call" allow="camera; microphone; fullscreen; display-capture" src="https://meet.jit.si/' + encodeURIComponent(room) + '"></iframe>';
-
-  document.body.appendChild(overlay);
 };
