@@ -1,0 +1,349 @@
+// DuoVibe ASCII-safe content banks.
+
+window.BANKS = {
+  wouldRather: [
+    { a: "Always be 10 minutes late", b: "Always be 20 minutes early" },
+    { a: "Live in a quiet beach house", b: "Live in a busy city penthouse" },
+    { a: "Never use social media again", b: "Never watch movies again" },
+    { a: "Have unlimited free travel", b: "Have unlimited free food" },
+    { a: "Read your partner's mind", b: "Have your partner read your mind" },
+    { a: "Only text in voice notes", b: "Only text in memes" },
+    { a: "Give up coffee forever", b: "Give up chocolate forever" },
+    { a: "Live without music", b: "Live without TV and movies" },
+    { a: "Be famous for something embarrassing", b: "Be unknown forever" },
+    { a: "Have a rewind button for life", b: "Have a pause button for life" },
+    { a: "Teleport anywhere once a day", b: "Fly, but only 10 mph" },
+    { a: "Know when you will die", b: "Know how you will die" },
+    { a: "Speak every language", b: "Play every instrument" },
+    { a: "Have a photographic memory", b: "Have perfect intuition" },
+    { a: "Date someone 10 years older", b: "Date someone 10 years younger" },
+    { a: "Never argue but never deeply connect", b: "Argue sometimes but connect deeply" },
+    { a: "Live together but work apart", b: "Work together but live apart" },
+    { a: "Get married tomorrow", b: "Wait 5 years for a huge wedding" },
+    { a: "Have 5 kids", b: "Have 0 kids and travel the world" },
+    { a: "Always know what your partner thinks", b: "Always know what strangers think" },
+    { a: "Lose your phone for a month", b: "Lose your wallet for a month" },
+    { a: "Have a personal chef", b: "Have a personal driver" },
+    { a: "Only eat sweet foods", b: "Only eat savory foods" },
+    { a: "Sleep 4 hours a night forever", b: "Sleep 12 hours a night forever" },
+    { a: "Be allergic to your favorite food", b: "Be allergic to your favorite animal" },
+    { a: "Have an endless beach vacation", b: "Have an endless mountain cabin trip" },
+    { a: "Never feel physical pain again", b: "Never feel emotional pain again" },
+    { a: "Be the funniest person in the room", b: "Be the smartest person in the room" },
+    { a: "Live in the year 1800", b: "Live in the year 2200" },
+    { a: "Have free Uber for life", b: "Have free Amazon for life" },
+    { a: "Lose all old memories", b: "Never make new memories" },
+    { a: "Only wear formal clothes", b: "Only wear pajamas" },
+    { a: "One perfect love for 5 years", b: "One good love for 50 years" },
+    { a: "Be stuck on an island alone", b: "Be stuck there with an enemy" },
+    { a: "Have the best body ever", b: "Have the best mind ever" },
+    { a: "Dance like Beyonce", b: "Sing like Beyonce" },
+    { a: "Live without internet for 1 year", b: "Live without AC or heat for 1 year" },
+    { a: "Have a tail", b: "Have wings that cannot fly" },
+    { a: "Marry rich but boring", b: "Marry poor but exciting" },
+    { a: "Travel the world alone for free", b: "Stay home with your partner forever" }
+  ],
+
+  thisOrThat: [
+    { a: "Coffee", b: "Tea" },
+    { a: "Night Owl", b: "Early Bird" },
+    { a: "Pizza", b: "Burger" },
+    { a: "Beach", b: "Mountains" },
+    { a: "Dogs", b: "Cats" },
+    { a: "iPhone", b: "Android" },
+    { a: "Movies", b: "TV Shows" },
+    { a: "Sweet", b: "Salty" },
+    { a: "Summer", b: "Winter" },
+    { a: "Book", b: "Audiobook" },
+    { a: "Road Trip", b: "Flight" },
+    { a: "Video Games", b: "Board Games" },
+    { a: "Salad", b: "Fries" },
+    { a: "Still Water", b: "Sparkling Water" },
+    { a: "Art Museum", b: "Sports Game" },
+    { a: "City Lights", b: "Starry Sky" },
+    { a: "Beer", b: "Wine" },
+    { a: "Karaoke", b: "Dancing" },
+    { a: "Photos", b: "Videos" },
+    { a: "Pancakes", b: "Waffles" },
+    { a: "Comedy", b: "Horror" },
+    { a: "Running", b: "Lifting" },
+    { a: "Yoga", b: "Boxing" },
+    { a: "Soda", b: "Juice" },
+    { a: "Ice Cream", b: "Cake" },
+    { a: "Bath", b: "Shower" },
+    { a: "Tacos", b: "Sushi" },
+    { a: "Rock", b: "Pop" },
+    { a: "Roses", b: "Sunflowers" },
+    { a: "Soccer", b: "Basketball" },
+    { a: "New Year", b: "Halloween" },
+    { a: "Pack Light", b: "Pack Everything" },
+    { a: "Plan Ahead", b: "Go With Flow" },
+    { a: "Introvert", b: "Extrovert" },
+    { a: "Cold Drinks", b: "Hot Drinks" },
+    { a: "Ocean", b: "Lake" },
+    { a: "Give Gifts", b: "Receive Gifts" },
+    { a: "Text", b: "Call" },
+    { a: "Thrill Rides", b: "Chill Rides" },
+    { a: "Spicy Food", b: "Mild Food" }
+  ],
+
+  redGreenFlag: [
+    "Claps when the airplane lands",
+    "Remembers your exact coffee order",
+    "Has 10000 unread emails",
+    "Still uses Internet Explorer",
+    "Texts k as a reply",
+    "Says we need to talk with no context",
+    "Brings their mom on the first date",
+    "Lists exes by number instead of name",
+    "Keeps score of arguments",
+    "Sends good morning texts every day",
+    "Has 47 half-finished journals",
+    "Alphabetizes their spice rack",
+    "Only listens to one artist obsessively",
+    "Still has their childhood teddy bear",
+    "Will not eat anything green",
+    "Owns 15 pairs of the same sneakers",
+    "Reads the ending of books first",
+    "Takes a photo of every meal",
+    "Does not tip at restaurants",
+    "Tips 30 percent everywhere",
+    "Has a complicated Starbucks order",
+    "Only showers at night",
+    "Talks to plants",
+    "Never watches the news",
+    "Knows every K-drama by heart",
+    "Has three family group chats",
+    "Does not believe in horoscopes",
+    "Checks their horoscope every morning",
+    "Posts gym selfies every day",
+    "Still uses Facebook",
+    "Does not own a bed frame",
+    "Has a vision board above their desk",
+    "Only reads self-help books",
+    "Cannot swim as an adult",
+    "Hates New Year's Eve",
+    "Wears socks to bed",
+    "Does not use pillows",
+    "Has a 10-step skincare routine",
+    "Only drinks water",
+    "Splits the bill to the cent"
+  ],
+
+  compatQuiz: [
+    "Who is more likely to buy snacks at midnight?",
+    "Who is more likely to cry at a wedding?",
+    "Who is a better cook?",
+    "Who is more organized?",
+    "Who is the better driver?",
+    "Who takes longer to get ready?",
+    "Who is more likely to forget an anniversary?",
+    "Who falls asleep first on movie night?",
+    "Who is more romantic?",
+    "Who is more likely to start a small argument?",
+    "Who holds a grudge longer?",
+    "Who is funnier?",
+    "Who is more adventurous?",
+    "Who calls their mom first with news?",
+    "Who is a better dancer?",
+    "Who is more likely to lose their phone?",
+    "Who spends more on random things?",
+    "Who is more likely to oversleep?",
+    "Who texts first after a fight?",
+    "Who is better at keeping secrets?",
+    "Who is more jealous?",
+    "Who is more likely to nap during the day?",
+    "Who is more addicted to their phone?",
+    "Who can binge a whole show in one day?",
+    "Who is the pickier eater?",
+    "Who is more likely to try wild food?",
+    "Who gives better advice?",
+    "Who is more stubborn?",
+    "Who says I love you first?",
+    "Who is the planner?",
+    "Who is more likely to go viral?",
+    "Who remembers birthdays better?",
+    "Who gets lost without GPS?",
+    "Who complains more about weather?",
+    "Who is more competitive?",
+    "Who gets scared easier?",
+    "Who would adopt a stray animal?",
+    "Who gives better gifts?",
+    "Who is more patient?",
+    "Who overshares with strangers?"
+  ],
+
+  blindRankItems: [
+    "Tropical Vacation", "Homemade Dinner", "Surprise Gift", "Road Trip", "Movie Night",
+    "Breakfast in Bed", "Concert Tickets", "Spa Day", "Cooking Class", "Hiking Adventure",
+    "Picnic in the Park", "Dancing All Night", "Game Night", "Beach Sunset", "Mountain Cabin",
+    "City Weekend", "Museum Date", "Live Theatre", "Wine Tasting", "Hot Air Balloon",
+    "Stargazing Night", "Ice Skating", "Pottery Class", "Karaoke Night", "Roadside Diner",
+    "Festival Day", "Bookshop Browse", "Coffee Shop Hop", "Waterfall Hike", "Camping Trip",
+    "Fancy Restaurant", "Street Food Tour", "Boat Ride", "Horse Riding", "Scuba Diving",
+    "Comedy Show", "Art Gallery", "Rooftop Dinner", "Carnival Fair", "Botanical Garden"
+  ],
+
+  guessAge: [
+    { subject: "Year the iPhone 1 was released", answer: 2007 },
+    { subject: "Year Google was founded", answer: 1998 },
+    { subject: "Year Instagram launched", answer: 2010 },
+    { subject: "Year Netflix was founded", answer: 1997 },
+    { subject: "Year TikTok launched globally", answer: 2016 },
+    { subject: "Year Facebook was launched", answer: 2004 },
+    { subject: "Year YouTube was created", answer: 2005 },
+    { subject: "Year the first Harry Potter book was published", answer: 1997 },
+    { subject: "Year Titanic the movie released", answer: 1997 },
+    { subject: "Year Spotify launched", answer: 2008 },
+    { subject: "Year Twitter was founded", answer: 2006 },
+    { subject: "Year Snapchat launched", answer: 2011 },
+    { subject: "Year WhatsApp was created", answer: 2009 },
+    { subject: "Year the Berlin Wall fell", answer: 1989 },
+    { subject: "Year the first Avengers movie came out", answer: 2012 },
+    { subject: "Year Michael Jackson died", answer: 2009 },
+    { subject: "Year Beyonce released Lemonade", answer: 2016 },
+    { subject: "Year Barack Obama became president", answer: 2009 },
+    { subject: "Year the first Star Wars movie released", answer: 1977 },
+    { subject: "Year the Eiffel Tower was built", answer: 1889 },
+    { subject: "Year humans landed on the moon", answer: 1969 },
+    { subject: "Year Minecraft was released", answer: 2011 },
+    { subject: "Year Zoom was founded", answer: 2011 },
+    { subject: "Year Pokemon GO launched", answer: 2016 },
+    { subject: "Year Amazon was founded", answer: 1994 },
+    { subject: "Year the first Toy Story movie came out", answer: 1995 },
+    { subject: "Year Game of Thrones premiered", answer: 2011 },
+    { subject: "Year the COVID pandemic started", answer: 2020 },
+    { subject: "Year Taylor Swift released her debut album", answer: 2006 },
+    { subject: "Year Nigeria gained independence", answer: 1960 },
+    { subject: "Year the US Declaration was signed", answer: 1776 },
+    { subject: "Year the first modern Olympics were held", answer: 1896 },
+    { subject: "Year Disney was founded", answer: 1923 },
+    { subject: "Year Coca-Cola was invented", answer: 1886 },
+    { subject: "Year the Wright Brothers flew", answer: 1903 },
+    { subject: "Year the Ming dynasty ended", answer: 1644 },
+    { subject: "Year Shakespeare was born", answer: 1564 },
+    { subject: "Year the first email was sent", answer: 1971 },
+    { subject: "Year Rihanna released Umbrella", answer: 2007 },
+    { subject: "Year the Mona Lisa was completed", answer: 1519 }
+  ],
+
+  guessCeleb: [
+    { clues: ["Pop star born in Houston", "Formerly in a girl group", "Married to Jay-Z", "Known for Lemonade"], answer: "Beyonce" },
+    { clues: ["Nigerian Afrobeats star", "Hit song Essence", "Known as Starboy", "Collaborated with Drake"], answer: "Wizkid" },
+    { clues: ["Country-pop singer", "Eras Tour", "Re-recorded old albums", "Known for breakup songs"], answer: "Taylor Swift" },
+    { clues: ["Canadian rapper", "Started on Degrassi", "Owns OVO", "Loves Toronto"], answer: "Drake" },
+    { clues: ["Barbadian pop icon", "Started Fenty Beauty", "Hit song Diamonds", "Owns Savage X Fenty"], answer: "Rihanna" },
+    { clues: ["British actor", "Played Batman", "Was in Twilight", "First name Robert"], answer: "Robert Pattinson" },
+    { clues: ["Nigerian singer", "Hit song Fall", "DMW founder", "Afrobeats superstar"], answer: "Davido" },
+    { clues: ["Reality TV star", "Beauty brand founder", "Family name starts with K", "Kylie Cosmetics"], answer: "Kylie Jenner" },
+    { clues: ["British singer", "Albums named after ages", "Hit song Hello", "From Tottenham"], answer: "Adele" },
+    { clues: ["Nigerian singer", "African Giant", "Grammy winner", "Hit song Ye"], answer: "Burna Boy" },
+    { clues: ["Rapper from Compton", "Pulitzer winner", "Album DAMN", "Co-signed by Dr Dre"], answer: "Kendrick Lamar" },
+    { clues: ["Reggaeton star", "Hit song Gasolina", "Puerto Rican artist", "Name includes Yankee"], answer: "Daddy Yankee" },
+    { clues: ["Puerto Rican superstar", "Hit Titi Me Pregunto", "Huge Spotify artist", "Animal nickname"], answer: "Bad Bunny" },
+    { clues: ["Played Iron Man", "Initials RDJ", "Sherlock Holmes actor", "Marvel star"], answer: "Robert Downey Jr" },
+    { clues: ["Known as The Rock", "Former wrestler", "Action movie star", "Starred in Jumanji"], answer: "Dwayne Johnson" },
+    { clues: ["South Korean group", "Seven members", "Hit song Dynamite", "Fans are ARMY"], answer: "BTS" },
+    { clues: ["Talk show host", "Famous giveaways", "Danced on her show", "First name Ellen"], answer: "Ellen DeGeneres" },
+    { clues: ["Portuguese soccer star", "Known for SIUU", "Initials CR7", "Played for Real Madrid"], answer: "Cristiano Ronaldo" },
+    { clues: ["Argentine soccer star", "World Cup winner", "Plays for Inter Miami", "First name Lionel"], answer: "Lionel Messi" },
+    { clues: ["Pop star from Louisiana", "Hit song Toxic", "2000s icon", "Free movement around her name"], answer: "Britney Spears" },
+    { clues: ["Nigerian singer", "Hit Love Nwantiti", "Viral on TikTok", "Stage name has four letters"], answer: "Ckay" },
+    { clues: ["Actress from Mean Girls", "Red hair icon", "Had a comeback", "First name Lindsay"], answer: "Lindsay Lohan" },
+    { clues: ["Canadian singer", "Hit Blinding Lights", "Super Bowl performer", "Stage name starts with The"], answer: "The Weeknd" },
+    { clues: ["Colombian singer", "Hips Don't Lie", "Known for dancing", "First name Shakira"], answer: "Shakira" },
+    { clues: ["Nigerian producer", "Mavin Records", "Known for Dorobucci", "First name Don"], answer: "Don Jazzy" },
+    { clues: ["Actress from Friends", "Played Rachel", "Iconic haircut", "Married Brad Pitt once"], answer: "Jennifer Aniston" },
+    { clues: ["Rapper from Atlanta", "Member of Migos", "Married Cardi B", "Name means move aside"], answer: "Offset" },
+    { clues: ["Rapper from the Bronx", "Bodak Yellow", "Former dancer", "Won rap Grammy"], answer: "Cardi B" },
+    { clues: ["Hollywood actor", "Played Deadpool", "Married Blake Lively", "Known for jokes"], answer: "Ryan Reynolds" },
+    { clues: ["Young Grammy winner", "Hit Bad Guy", "Brother Finneas", "First name Billie"], answer: "Billie Eilish" },
+    { clues: ["Rapper and businessman", "Owns Roc Nation", "Married Beyonce", "99 Problems"], answer: "Jay-Z" },
+    { clues: ["Nigerian singer", "Hit song Rush", "Mavin artist", "Stage name Ayra"], answer: "Ayra Starr" },
+    { clues: ["Singer and actress", "Also known as J Lo", "On The Floor", "Dated Ben Affleck twice"], answer: "Jennifer Lopez" },
+    { clues: ["Rapper from Detroit", "Slim Shady", "8 Mile", "Very fast rapper"], answer: "Eminem" },
+    { clues: ["Nigerian singer", "Hit Johnny", "Mama Africa", "Name has Yemi"], answer: "Yemi Alade" },
+    { clues: ["Actress from Twilight", "Played Princess Diana", "Short hair era", "First name Kristen"], answer: "Kristen Stewart" },
+    { clues: ["Rapper from Houston", "Sicko Mode", "Astroworld", "First name Travis"], answer: "Travis Scott" },
+    { clues: ["Nigerian singer", "Hit Calm Down", "Mavin artist", "Former dancer"], answer: "Rema" },
+    { clues: ["South African comedian", "Hosted The Daily Show", "Book Born a Crime", "First name Trevor"], answer: "Trevor Noah" },
+    { clues: ["American actor", "Fresh Prince", "Won Oscar", "First name Will"], answer: "Will Smith" }
+  ],
+
+  bombCategories: [
+    "Things found in a kitchen", "Things that are red", "Sweet fruits", "Things you take to the beach",
+    "Movies with sequels", "Songs with love in the title", "Things in a classroom", "Breakfast foods",
+    "Things that fly", "Famous singers", "Things in a bedroom", "Round things", "Cold things",
+    "Vegetables", "Things you wear on your head", "Zoo animals", "Things on a desk", "Pizza toppings",
+    "Things in a gym", "Types of drinks", "Capital cities", "Things with wheels", "Famous athletes",
+    "Ice cream flavors", "Things in a hospital", "Dances", "Things in a car", "Yellow things",
+    "Soft things", "Loud things", "Famous rappers", "Things at a wedding", "Famous Nigerian artists",
+    "Things in a supermarket", "Scary things", "Hot foods", "Things in your pocket", "Smelly things",
+    "Famous couples", "Things with buttons"
+  ],
+
+  letterPrompts: [
+    { category: "Animals", letter: "B" }, { category: "Foods", letter: "P" },
+    { category: "Countries", letter: "M" }, { category: "Movies", letter: "T" },
+    { category: "Celebrities", letter: "J" }, { category: "Cities", letter: "L" },
+    { category: "Fruits", letter: "A" }, { category: "Sports", letter: "S" },
+    { category: "Colors", letter: "G" }, { category: "Jobs", letter: "D" },
+    { category: "Songs", letter: "H" }, { category: "Cars", letter: "F" },
+    { category: "TV Shows", letter: "B" }, { category: "Drinks", letter: "C" },
+    { category: "Vegetables", letter: "O" }, { category: "Instruments", letter: "G" },
+    { category: "Flowers", letter: "R" }, { category: "Clothing", letter: "S" },
+    { category: "Body Parts", letter: "N" }, { category: "School Subjects", letter: "M" },
+    { category: "Snacks", letter: "C" }, { category: "Desserts", letter: "T" },
+    { category: "Capitals", letter: "P" }, { category: "Historical Figures", letter: "N" },
+    { category: "Superheroes", letter: "S" }, { category: "Disney Movies", letter: "F" },
+    { category: "Candies", letter: "S" }, { category: "Birds", letter: "E" },
+    { category: "Fish", letter: "T" }, { category: "Reptiles", letter: "C" },
+    { category: "Insects", letter: "A" }, { category: "Trees", letter: "O" },
+    { category: "Weather Types", letter: "S" }, { category: "Furniture", letter: "C" },
+    { category: "Kitchen Tools", letter: "K" }, { category: "Board Games", letter: "M" },
+    { category: "Fast Food Chains", letter: "B" }, { category: "Nigerian Dishes", letter: "J" },
+    { category: "American Dishes", letter: "B" }, { category: "Spices", letter: "G" }
+  ]
+};
+
+window.Picker = {
+  nextItem: function(bankKey, bankArray) {
+    if (!bankArray || !bankArray.length) return null;
+    var storageKey = "duo_seen_" + bankKey;
+    var seen = [];
+    try {
+      seen = JSON.parse(localStorage.getItem(storageKey) || "[]");
+      if (!Array.isArray(seen)) seen = [];
+    } catch (e) {
+      seen = [];
+    }
+
+    if (seen.length >= bankArray.length) seen = [];
+
+    var unseen = bankArray.map(function(_, i) { return i; }).filter(function(i) {
+      return seen.indexOf(i) === -1;
+    });
+
+    var randomIdx = unseen[Math.floor(Math.random() * unseen.length)];
+    seen.push(randomIdx);
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(seen));
+    } catch (e2) {}
+
+    return bankArray[randomIdx];
+  },
+
+  freshNumber: function(min, max) {
+    min = min || 1;
+    max = max || 100;
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  },
+
+  freshBlindRankSet: function(count) {
+    count = count || 5;
+    var bank = window.BANKS.blindRankItems || [];
+    var shuffled = bank.slice().sort(function() { return Math.random() - 0.5; });
+    return shuffled.slice(0, count);
+  }
+};

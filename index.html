@@ -6,9 +6,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>DuoVibe - Real-Time Couple Games</title>
   <meta name="description" content="DuoVibe real-time couple and group games.">
-  <link rel="stylesheet" href="features.css?v=together-sync-1">
-  <link rel="stylesheet" href="style.css?v=together-sync-1">
+
+  <link rel="stylesheet" href="features.regular-sync-3.css">
+  <link rel="stylesheet" href="style.regular-sync-3.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    window.DUOVIBE_BUILD = "regular-sync-3";
+
+    // Clear old browser/service-worker caches so the clean domain gets the synced build.
+    (function () {
+      try {
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (reg) {
+              reg.unregister();
+            });
+          });
+        }
+
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (keys) {
+            keys.forEach(function (key) {
+              caches.delete(key);
+            });
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 </head>
@@ -36,9 +63,9 @@
     </main>
   </div>
 
-  <script src="config.js?v=together-sync-1"></script>
-  <script src="banks.js?v=together-sync-1"></script>
-  <script src="app.js?v=together-sync-1"></script>
-  <script src="features.js?v=together-sync-1"></script>
+  <script src="config.regular-sync-3.js"></script>
+  <script src="banks.regular-sync-3.js"></script>
+  <script src="app.regular-sync-3.js"></script>
+  <script src="features.regular-sync-3.js"></script>
 </body>
 </html>
