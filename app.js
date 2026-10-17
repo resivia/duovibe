@@ -9,7 +9,7 @@
   const SUPABASE_URL = (window.CONFIG && window.CONFIG.SUPABASE_URL) || "https://euqrzxxldlsbhuyjuleo.supabase.co";
   const SUPABASE_KEY = (window.CONFIG && window.CONFIG.SUPABASE_ANON_KEY) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1cXJ6eHhsZGxzYmh1eWp1bGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NTUzOTAsImV4cCI6MjA5MzIzMTM5MH0.J4zrhIzjIBkUmxHEPcaoxgoFudtAvXHmJaPToigR_ig";
 
-  let sb = null;
+  let sb = (window.supabase && typeof window.supabase.createClient === "function") ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
   try {
     if (window.supabase && typeof window.supabase.createClient === "function") {
       sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -410,5 +410,6 @@
     window.App.init();
   });
 })();
+
 
 
