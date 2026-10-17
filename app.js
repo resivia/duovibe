@@ -1,4 +1,4 @@
-// DuoVibe Cloud Sync Engine - Version: sync99
+﻿// DuoVibe Cloud Sync Engine - Version: sync99
 (function () {
   "use strict";
 
@@ -33,7 +33,7 @@
 
     log(msg, isErr = false) {
       console.log("DuoVibe:", msg);
-      this.lastLog = (isErr ? "❌ " : "🟢 ") + msg;
+      this.lastLog = (isErr ? "âŒ " : "ðŸŸ¢ ") + msg;
       const dbg = document.getElementById("debug-hud");
       if (dbg) dbg.textContent = this.lastLog;
     },
@@ -43,21 +43,21 @@
       if (!c) return;
       c.innerHTML = `
         <div class="home-card">
-          <h2>Welcome to DuoVibe 💕</h2>
+          <h2>Welcome to DuoVibe ðŸ’•</h2>
           <p>Play real-time games with your partner or friends across the world.</p>
           <div style="margin-top:16px;">
             <label style="font-size:13px; font-weight:800; color:#666;">YOUR NAME</label>
             <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Your name" />
           </div>
           <div style="margin-top:16px;">
-            <button class="btn-primary" onclick="App.createRoom()">✨ Create New Room</button>
+            <button class="btn-primary" onclick="App.createRoom()">âœ¨ Create New Room</button>
             <div class="divider">OR JOIN</div>
             <div style="display:flex; gap:8px;">
               <input id="input-room-code" placeholder="6-DIGIT CODE" class="game-input" style="text-transform:uppercase; letter-spacing:2px; text-align:center;" maxlength="6" />
               <button class="btn-secondary" style="width:110px;" onclick="App.joinRoomWithCode()">Join</button>
             </div>
           </div>
-          <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:12px;" onclick="App.testConnection()">🔍 Test Cloud Connection</button>
+          <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:12px;" onclick="App.testConnection()">ðŸ” Test Cloud Connection</button>
           <div id="debug-hud" style="margin-top:12px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">Status: Ready (v99)</div>
         </div>
       `;
@@ -73,7 +73,7 @@
           alert("DB Error: " + error.message + "\nDid you run supabase-schema.sql in Supabase?");
         } else {
           this.log("SUCCESS! Connected to Supabase rooms table.");
-          alert("✅ SUCCESS! Connected to Supabase rooms table.");
+          alert("âœ… SUCCESS! Connected to Supabase rooms table.");
         }
       } catch (err) {
         this.log("Exception: " + err.message, true);
@@ -221,7 +221,7 @@
       const names = [];
       Object.keys(playersMap).forEach(id => {
         const name = playersMap[id];
-        names.push(`🟢 ${esc(name)}${id === this.myId ? " (You)" : ""}`);
+        names.push(`ðŸŸ¢ ${esc(name)}${id === this.myId ? " (You)" : ""}`);
       });
       container.innerHTML = names.map(n => `<span class="player-tag">${n}</span>`).join(" ");
     },
@@ -237,26 +237,26 @@
               <h2 class="room-code-display">${esc(this.roomCode)}</h2>
             </div>
             <div style="display:flex;gap:6px;">
-              <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 10px;font-size:12px;" onclick="App.pollDB(); alert('Synced with cloud!');">🔄 Sync</button>
-              <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 10px;font-size:12px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Copied!');">📋 Copy</button>
+              <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 10px;font-size:12px;" onclick="App.pollDB(); alert('Synced with cloud!');">ðŸ”„ Sync</button>
+              <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 10px;font-size:12px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Copied!');">ðŸ“‹ Copy</button>
             </div>
           </div>
           <div style="margin: 16px 0;">
             <label style="font-size:11px; font-weight:800; color:#8E8E93;">PLAYERS IN ROOM:</label>
             <div id="connected-players-list" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-              <span class="player-tag">🟢 ${esc(this.myName)} (You)</span>
+              <span class="player-tag">ðŸŸ¢ ${esc(this.myName)} (You)</span>
             </div>
           </div>
           <h3 style="margin-top:20px;">Select a Game</h3>
           <div class="games-grid-container">
-            <div class="game-card" onclick="App.launchGame('would-rather')"><span>⚖️</span> <h4>Would You Rather</h4></div>
-            <div class="game-card" onclick="App.launchGame('this-or-that')"><span>🔄</span> <h4>This or That</h4></div>
-            <div class="game-card" onclick="App.launchGame('red-green-flag')"><span>🚩</span> <h4>Red/Green Flag</h4></div>
-            <div class="game-card" onclick="App.launchGame('couple-compat')"><span>💖</span> <h4>Compat Quiz</h4></div>
-            <div class="game-card" onclick="App.launchGame('blind-rank')"><span>🙈</span> <h4>Blind Rank</h4></div>
-            <div class="game-card" onclick="App.launchGame('truths-lie')"><span>🤫</span> <h4>2 Truths 1 Lie</h4></div>
-            <div class="game-card" onclick="App.launchGame('guess-age')"><span>📅</span> <h4>Guess The Year</h4></div>
-            <div class="game-card" onclick="App.launchGame('guess-number')"><span>🔢</span> <h4>Guess Number</h4></div>
+            <div class="game-card" onclick="App.launchGame('would-rather')"><span>âš–ï¸</span> <h4>Would You Rather</h4></div>
+            <div class="game-card" onclick="App.launchGame('this-or-that')"><span>ðŸ”„</span> <h4>This or That</h4></div>
+            <div class="game-card" onclick="App.launchGame('red-green-flag')"><span>ðŸš©</span> <h4>Red/Green Flag</h4></div>
+            <div class="game-card" onclick="App.launchGame('couple-compat')"><span>ðŸ’–</span> <h4>Compat Quiz</h4></div>
+            <div class="game-card" onclick="App.launchGame('blind-rank')"><span>ðŸ™ˆ</span> <h4>Blind Rank</h4></div>
+            <div class="game-card" onclick="App.launchGame('truths-lie')"><span>ðŸ¤«</span> <h4>2 Truths 1 Lie</h4></div>
+            <div class="game-card" onclick="App.launchGame('guess-age')"><span>ðŸ“…</span> <h4>Guess The Year</h4></div>
+            <div class="game-card" onclick="App.launchGame('guess-number')"><span>ðŸ”¢</span> <h4>Guess Number</h4></div>
           </div>
           <div id="debug-hud" style="margin-top:14px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">${esc(this.lastLog)}</div>
         </div>
@@ -319,7 +319,7 @@
       if (keys.length >= 2) {
         const vals = keys.map(k => choices[k]);
         const match = vals.every(v => v === vals[0]);
-        html += `<div style="text-align:center;font-weight:900;margin-top:10px;color:${match ? '#137333' : '#1A1A1A'};">${match ? '🎉 MATCH!' : '🤝 Different choices'}</div>`;
+        html += `<div style="text-align:center;font-weight:900;margin-top:10px;color:${match ? '#137333' : '#1A1A1A'};">${match ? 'ðŸŽ‰ MATCH!' : 'ðŸ¤ Different choices'}</div>`;
       }
       html += '</div>';
       return html;
@@ -359,16 +359,16 @@
           body = `
             <h3>Red Flag or Green Flag?</h3>
             <p style="font-weight:700;margin:16px 0;">"${esc(cur)}"</p>
-            <button class="btn-choice ${myChoice === '🟢 Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('🟢 Green Flag')">🟢 Green Flag</button>
-            <button class="btn-choice ${myChoice === '🚩 Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('🚩 Red Flag')">🚩 Red Flag</button>
+            <button class="btn-choice ${myChoice === 'ðŸŸ¢ Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('ðŸŸ¢ Green Flag')">ðŸŸ¢ Green Flag</button>
+            <button class="btn-choice ${myChoice === 'ðŸš© Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('ðŸš© Red Flag')">ðŸš© Red Flag</button>
           `;
           break;
         case "couple-compat":
           body = `
             <h3>Compatibility Quiz</h3>
             <p style="font-weight:700;margin:16px 0;">${esc(cur)}</p>
-            <button class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')">🙋‍♂️ Definitely Me</button>
-            <button class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')">🙋‍♀️ Definitely Partner</button>
+            <button class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')">ðŸ™‹â€â™‚ï¸ Definitely Me</button>
+            <button class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')">ðŸ™‹â€â™€ï¸ Definitely Partner</button>
           `;
           break;
         case "blind-rank":
@@ -391,14 +391,14 @@
       c.innerHTML = `
         <div class="active-game-wrapper">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="App.exitGame()">← Lobby</button>
+            <button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="App.exitGame()">â† Lobby</button>
             <span style="font-weight:900;font-size:11px;letter-spacing:1px;color:#8E8E93;">ACTIVE GAME</span>
           </div>
           ${body}
           ${this.renderComparison()}
           <div style="display:flex;gap:8px;margin-top:16px;">
-            <button class="btn-primary" style="flex:1;" onclick="App.pollDB(); alert('Synced!');">🔄 Force Sync</button>
-            <button class="btn-action" style="flex:1;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
+            <button class="btn-primary" style="flex:1;" onclick="App.pollDB(); alert('Synced!');">ðŸ”„ Force Sync</button>
+            <button class="btn-action" style="flex:1;" onclick="App.launchGame('${this.activeGame}')">Next Round â†’</button>
           </div>
           <div id="debug-hud" style="margin-top:14px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">${esc(this.lastLog)}</div>
         </div>
