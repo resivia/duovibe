@@ -34,8 +34,12 @@
     lastLog: "App ready.",
 
     init() {
-      getClient();
-      this.renderHome();
+      try {
+        getClient();
+        this.renderHome();
+      } catch (err) {
+        console.error("Init error:", err);
+      }
     },
 
     isHost() {
@@ -54,21 +58,21 @@
       if (!c) return;
       c.innerHTML = `
         <div class="home-card">
-          <h2>Welcome to DuoVibe</h2>
-          <p>Play live two-player games with your partner.</p>
+          <h2>Welcome to DuoVibe 🎮</h2>
+          <p>Play live social media games with your partner or friends.</p>
           <div style="margin-top:16px;">
             <label style="font-size:13px; font-weight:800; color:#666;">YOUR NAME</label>
             <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Your name" />
           </div>
           <div style="margin-top:16px;">
-            <button class="btn-primary" onclick="App.createRoom()">Create Room (Host)</button>
+            <button class="btn-primary" onclick="App.createRoom()">👑 Create Room (Host)</button>
             <div class="divider">OR JOIN AS PLAYER</div>
             <div style="display:flex; gap:8px;">
               <input id="input-room-code" placeholder="6-DIGIT CODE" class="game-input" style="text-transform:uppercase; letter-spacing:2px; text-align:center;" maxlength="6" />
               <button class="btn-secondary" style="width:110px;" onclick="App.joinRoomWithCode()">Join</button>
             </div>
           </div>
-          <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:12px;" onclick="App.testConnection()">Test Connection</button>
+          <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:12px;" onclick="App.testConnection()">⚡ Test Connection</button>
           <div id="debug-hud" style="margin-top:12px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">Ready</div>
         </div>
       `;
@@ -76,18 +80,12 @@
 
     async testConnection() {
       const sb = getClient();
-      if (!sb) { this.log("Supabase client failed to load from CDN", true); alert("Supabase client failed to load."); return; }
+      if (!sb) { alert("Supabase failed to load."); return; }
       try {
         const { error } = await sb.from("rooms").select("id").limit(1);
-        if (error) {
-          this.log("DB Error: " + error.message, true);
-          alert("DB Error: " + error.message);
-        } else {
-          this.log("Connected to Supabase rooms table.");
-          alert("Connected to Supabase rooms table!");
-        }
+        if (error) alert("DB Error: " + error.message);
+        else alert("Connected to Supabase rooms table!");
       } catch (err) {
-        this.log("Exception: " + err.message, true);
         alert("Exception: " + err.message);
       }
     },
@@ -121,18 +119,12 @@
       this.activeGame = null;
       this.gameState = { choices: {}, players: {}, hostId: creatingAsHost ? this.myId : null };
       this.renderLobby();
-      this.log("Entering room " + code + "...");
 
       const sb = getClient();
-      if (!sb) {
-        this.log("Supabase client missing", true);
-        return;
-      }
+      if (!sb) return;
 
       try {
         let { data: room, error } = await sb.from("rooms").select("*").eq("id", code).maybeSingle();
-        if (error) this.log("Fetch error: " + error.message, true);
-
         if (!room) {
           if (!creatingAsHost) {
             alert("Room " + code + " not found. Ask the host to create it first!");
@@ -144,21 +136,12 @@
             players: { [this.myId]: { name: this.myName, role: "host" } },
             choices: {}
           };
-          const { error: insErr } = await sb.from("rooms").insert({ id: code, current_game: "", game_state: state });
-          if (insErr) {
-            this.log("Insert Error: " + insErr.message, true);
-            alert("DB Error: " + insErr.message);
-            return;
-          }
+          await sb.from("rooms").insert({ id: code, current_game: "", game_state: state });
           this.gameState = state;
-          this.log("Host created room " + code);
         } else {
           let state = room.game_state || { choices: {}, players: {}, hostId: null };
           state.players = state.players || {};
-
-          if (!state.hostId && creatingAsHost) {
-            state.hostId = this.myId;
-          }
+          if (!state.hostId && creatingAsHost) state.hostId = this.myId;
 
           const assignedRole = (state.hostId === this.myId) ? "host" : "player";
           this.myRole = assignedRole;
@@ -168,14 +151,13 @@
 
           this.activeGame = room.current_game || null;
           this.gameState = state;
-          this.log("Joined room as " + assignedRole.toUpperCase());
         }
 
         if (this.pollTimer) clearInterval(this.pollTimer);
         this.pollTimer = setInterval(() => this.pollDB(), 1200);
         this.renderLobby();
       } catch (e) {
-        this.log("Join error: " + e.message, true);
+        console.error("Join error:", e);
       }
     },
 
@@ -215,9 +197,7 @@
           this.gameState = remoteState;
           this.renderCurrentView();
         }
-      } catch (e) {
-        console.error("Poll err:", e);
-      }
+      } catch (e) {}
     },
 
     renderCurrentView() {
@@ -248,6 +228,8 @@
         state.choices = Object.assign({}, state.choices || {}, this.gameState.choices || {});
         if (this.gameState.currentPrompt) state.currentPrompt = this.gameState.currentPrompt;
         if (this.gameState.rankSet) state.rankSet = this.gameState.rankSet;
+        if (this.gameState.secretNumber) state.secretNumber = this.gameState.secretNumber;
+        if (this.gameState.clueIdx !== undefined) state.clueIdx = this.gameState.clueIdx;
 
         const currentGame = this.activeGame || "";
         this.gameState = state;
@@ -258,9 +240,7 @@
           game_state: state,
           updated_at: new Date().toISOString()
         }).eq("id", this.roomCode);
-      } catch (e) {
-        this.log("Push error: " + e.message, true);
-      }
+      } catch (e) {}
     },
 
     updatePlayersUI(playersMap) {
@@ -273,7 +253,7 @@
         const isHost = id === this.gameState.hostId;
         const isMe = id === this.myId;
         items.push(`<span class="player-tag" style="background:${isHost ? '#FFF4E5; border:1px solid #FF9800;' : '#EEF2FF; border:1px solid #6366F1;'}">
-          ${isHost ? '[HOST]' : '[PLAYER]'} ${esc(pName)}${isMe ? '(You)' : ''}
+          ${isHost ? '👑' : '👤'} ${esc(pName)} ${isMe ? '(You)' : ''} [${isHost ? 'HOST' : 'PLAYER'}]
         </span>`);
       });
       container.innerHTML = items.join(" ");
@@ -291,7 +271,7 @@
               <span class="room-label">ROOM CODE</span>
               <h2 class="room-code-display">${esc(this.roomCode)}</h2>
             </div>
-            <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Code copied!');">Copy</button>
+            <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Code copied!');">📋 Copy</button>
           </div>
           <div style="margin: 16px 0;">
             <label style="font-size:11px; font-weight:800; color:#8E8E93;">PLAYERS CONNECTED:</label>
@@ -299,13 +279,19 @@
           </div>
 
           ${isHost ? `
-            <h3 style="margin-top:20px;">Choose a Game (You are Host)</h3>
+            <h3 style="margin-top:20px;">Choose a Game (You are Host 👑)</h3>
             <div class="games-grid-container">
-              <div class="game-card" onclick="App.launchGame('would-rather')"><h4>Would You Rather</h4></div>
-              <div class="game-card" onclick="App.launchGame('this-or-that')"><h4>This or That</h4></div>
-              <div class="game-card" onclick="App.launchGame('red-green-flag')"><h4>Red/Green Flag</h4></div>
-              <div class="game-card" onclick="App.launchGame('couple-compat')"><h4>Compat Quiz</h4></div>
-              <div class="game-card" onclick="App.launchGame('blind-rank')"><h4>Blind Rank</h4></div>
+              <div class="game-card" onclick="App.launchGame('would-rather')"><span>⚖️</span> <h4>Would You Rather</h4></div>
+              <div class="game-card" onclick="App.launchGame('this-or-that')"><span>🔄</span> <h4>This or That</h4></div>
+              <div class="game-card" onclick="App.launchGame('red-green-flag')"><span>🚩</span> <h4>Red/Green Flag</h4></div>
+              <div class="game-card" onclick="App.launchGame('couple-compat')"><span>💖</span> <h4>Compat Quiz</h4></div>
+              <div class="game-card" onclick="App.launchGame('blind-rank')"><span>🙈</span> <h4>Blind Rank</h4></div>
+              <div class="game-card" onclick="App.launchGame('truths-lie')"><span>🤫</span> <h4>2 Truths & 1 Lie</h4></div>
+              <div class="game-card" onclick="App.launchGame('word-letters')"><span>🔤</span> <h4>First/Last Letter</h4></div>
+              <div class="game-card" onclick="App.launchGame('categories-bomb')"><span>💣</span> <h4>Pass The Bomb</h4></div>
+              <div class="game-card" onclick="App.launchGame('guess-age')"><span>📅</span> <h4>Guess The Year</h4></div>
+              <div class="game-card" onclick="App.launchGame('guess-number')"><span>🔢</span> <h4>Guess Number</h4></div>
+              <div class="game-card" onclick="App.launchGame('guess-celeb')"><span>⭐</span> <h4>Guess Celeb</h4></div>
             </div>
           ` : `
             <div style="padding:24px; text-align:center; background:#FAF9F7; border:1px solid #E8E6E3; border-radius:12px; margin-top:20px;">
@@ -314,7 +300,6 @@
               <p style="font-size:13px; color:#666;">Only the Host can start rounds. Get ready!</p>
             </div>
           `}
-          <div id="debug-hud" style="margin-top:14px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">${esc(this.lastLog)}</div>
         </div>
       `;
       this.updatePlayersUI(this.gameState.players || {});
@@ -338,8 +323,12 @@
       if (gameId === "red-green-flag") this.gameState.currentPrompt = picker.nextItem("redGreenFlag", banks.redGreenFlag);
       if (gameId === "couple-compat") this.gameState.currentPrompt = picker.nextItem("compatQuiz", banks.compatQuiz);
       if (gameId === "blind-rank") this.gameState.rankSet = picker.freshBlindRankSet(5);
+      if (gameId === "word-letters") this.gameState.currentPrompt = picker.nextItem("letterPrompts", banks.letterPrompts);
+      if (gameId === "categories-bomb") this.gameState.currentPrompt = picker.nextItem("bombCategories", banks.bombCategories);
+      if (gameId === "guess-age") this.gameState.currentPrompt = picker.nextItem("guessAge", banks.guessAge);
+      if (gameId === "guess-celeb") { this.gameState.currentPrompt = picker.nextItem("guessCeleb", banks.guessCeleb); this.gameState.clueIdx = 0; }
+      if (gameId === "guess-number") this.gameState.secretNumber = picker.freshNumber(1, 100);
 
-      this.log("Host launched: " + gameId);
       await this.pushDB();
       this.renderActiveGame();
     },
@@ -381,7 +370,7 @@
       if (keys.length >= 2) {
         const vals = keys.map(k => choices[k]);
         const match = vals.every(v => v === vals[0]);
-        html += `<div style="text-align:center;font-weight:900;margin-top:10px;color:${match ? '#137333' : '#1A1A1A'};">${match ? 'MATCH!' : 'Different choices'}</div>`;
+        html += `<div style="text-align:center;font-weight:900;margin-top:10px;color:${match ? '#137333' : '#1A1A1A'};">${match ? '🎉 MATCH!' : '⚡ Different choices'}</div>`;
       }
       html += '</div>';
       return html;
@@ -447,6 +436,63 @@
             `).join("")}
           `;
           break;
+        case "word-letters":
+          body = `
+            <h3>First / Last Letter</h3>
+            <p>Category: <strong>${esc(cur.category)}</strong></p>
+            <p>Must start with letter: <strong>'${esc(cur.letter)}'</strong></p>
+            <input type="text" id="g-input" placeholder="Type word..." class="game-input" />
+            <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('g-input').value)">Submit Word</button>
+          `;
+          break;
+        case "categories-bomb":
+          body = `
+            <h3>Pass The Bomb</h3>
+            <p>Category: <strong>${esc(cur)}</strong></p>
+            <input type="text" id="g-input" placeholder="Type word fast..." class="game-input" />
+            <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('g-input').value)">Pass Answer</button>
+          `;
+          break;
+        case "guess-age":
+          body = `
+            <h3>Guess The Year</h3>
+            <div style="background:#FAF9F7;border:1px solid #E8E6E3;padding:14px;border-radius:12px;font-weight:600;text-align:center;margin:12px 0;">"${esc(cur.subject)}"</div>
+            <input type="number" id="g-input" placeholder="Enter year..." class="game-input" />
+            <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('g-input').value)">Submit Guess</button>
+            <button class="btn-secondary" style="margin-top:8px;" onclick="alert('Answer: ' + App.gameState.currentPrompt.answer)">Reveal Year</button>
+          `;
+          break;
+        case "guess-number":
+          const guess = myChoice ? parseInt(myChoice) : null;
+          const secret = this.gameState.secretNumber || 50;
+          let hint = "";
+          if (guess !== null && !isNaN(guess)) {
+            if (guess === secret) hint = "Correct!";
+            else if (guess < secret) hint = "Higher 📈";
+            else hint = "Lower 📉";
+          }
+          body = `
+            <h3>Guess Secret Number (1-100)</h3>
+            <input type="number" id="g-input" placeholder="1 to 100..." class="game-input" />
+            <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('g-input').value)">Submit Guess</button>
+            ${myChoice ? `<p style="font-weight:700;margin-top:10px;">Your Guess: ${myChoice} — ${hint}</p>` : ""}
+          `;
+          break;
+        case "guess-celeb":
+          const clueIdx = this.gameState.clueIdx || 0;
+          const cluesList = cur.clues || [];
+          const cluesShown = cluesList.slice(0, clueIdx + 1);
+          body = `
+            <h3>Guess The Celebrity</h3>
+            <div style="background:#FAF9F7;border:1px solid #E8E6E3;padding:12px;border-radius:12px;margin:12px 0;">
+              ${cluesShown.map((cl, i) => `<p style="margin-bottom:4px;"><strong>Clue #${i+1}:</strong> ${esc(cl)}</p>`).join("")}
+            </div>
+            ${clueIdx < cluesList.length - 1 ? `<button class="btn-secondary" style="margin-bottom:10px;" onclick="App.gameState.clueIdx++; App.pushDB(); App.renderActiveGame();">Reveal Next Clue</button>` : ""}
+            <input type="text" id="g-input" placeholder="Type name..." class="game-input" />
+            <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('g-input').value)">Submit Guess</button>
+            <button class="btn-secondary" style="margin-top:8px;" onclick="alert('Answer: ' + App.gameState.currentPrompt.answer)">Reveal Answer</button>
+          `;
+          break;
         default:
           body = `<p>Game active.</p>`;
       }
@@ -455,7 +501,7 @@
         <div class="active-game-wrapper">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             ${isHost ? `
-              <button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="App.exitGame()">Lobby</button>
+              <button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="App.exitGame()">← Lobby</button>
             ` : `
               <span style="font-size:12px;color:#8E8E93;font-weight:700;">Host controls the session</span>
             `}
@@ -463,11 +509,10 @@
           </div>
           ${body}
           ${this.renderComparison()}${isHost ? `
-            <button class="btn-action" style="margin-top:16px;" onclick="App.launchGame('${this.activeGame}')">Next Round</button>
+            <button class="btn-action" style="margin-top:16px;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
           ` : `
             <p style="font-size:12px;color:#888;margin-top:12px;text-align:center;">Waiting for Host to advance to next round...</p>
           `}
-          <div id="debug-hud" style="margin-top:14px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">${esc(this.lastLog)}</div>
         </div>
       `;
     }
