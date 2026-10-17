@@ -1,3 +1,4 @@
+// DuoVibe Cloud Sync Engine - Version: sync99
 (function () {
   "use strict";
 
@@ -14,7 +15,7 @@
       sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
       window.sb = sb;
     }
-  } catch (e) { console.error("Supabase init error:", e); }
+  } catch (e) { console.error("Supabase error:", e); }
 
   window.App = {
     myId: "user_" + Math.random().toString(36).slice(2, 10),
@@ -24,7 +25,7 @@
     gameState: { choices: {}, players: {} },
     pollTimer: null,
     lastHash: "",
-    lastLog: "App loaded. Ready.",
+    lastLog: "App loaded (v99). Ready.",
 
     init() {
       this.renderHome();
@@ -43,7 +44,7 @@
       c.innerHTML = `
         <div class="home-card">
           <h2>Welcome to DuoVibe 💕</h2>
-          <p>Play real-time games with your partner or friends.</p>
+          <p>Play real-time games with your partner or friends across the world.</p>
           <div style="margin-top:16px;">
             <label style="font-size:13px; font-weight:800; color:#666;">YOUR NAME</label>
             <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Your name" />
@@ -57,7 +58,7 @@
             </div>
           </div>
           <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:12px;" onclick="App.testConnection()">🔍 Test Cloud Connection</button>
-          <div id="debug-hud" style="margin-top:12px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">Status: Ready</div>
+          <div id="debug-hud" style="margin-top:12px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">Status: Ready (v99)</div>
         </div>
       `;
     },
@@ -110,17 +111,13 @@
       this.log("Joining room " + code + "...");
 
       if (!sb) {
-        this.log("Supabase client missing", true);
+        this.log("Supabase missing", true);
         return;
       }
 
       try {
         let { data: room, error } = await sb.from("rooms").select("*").eq("id", code).maybeSingle();
         let state = { choices: {}, players: {} };
-
-        if (error) {
-          this.log("Fetch warning: " + error.message, true);
-        }
 
         if (!room) {
           state.players[this.myId] = this.myName;
@@ -130,18 +127,15 @@
             alert("Database Error: " + insErr.message);
             return;
           }
-          this.log("Created room row in cloud.");
+          this.log("Created room in cloud.");
         } else {
           state = room.game_state || { choices: {}, players: {} };
           state.players = state.players || {};
           state.players[this.myId] = this.myName;
-          const { error: updErr } = await sb.from("rooms").update({ game_state: state, updated_at: new Date().toISOString() }).eq("id", code);
-          if (updErr) {
-            this.log("Update Error: " + updErr.message, true);
-          }
+          await sb.from("rooms").update({ game_state: state, updated_at: new Date().toISOString() }).eq("id", code);
           this.activeGame = room.current_game || null;
           this.gameState = state;
-          this.log("Joined existing room in cloud.");
+          this.log("Joined room in cloud.");
         }
 
         if (this.pollTimer) clearInterval(this.pollTimer);
@@ -155,14 +149,7 @@
       if (!this.roomCode || !sb) return;
       try {
         let { data: room, error } = await sb.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
-        if (error) {
-          this.log("Poll error: " + error.message, true);
-          return;
-        }
-        if (!room) {
-          this.log("Room " + this.roomCode + " not found in DB", true);
-          return;
-        }
+        if (error || !room) return;
 
         const remoteGame = room.current_game || "";
         const remoteState = room.game_state || { choices: {}, players: {} };
@@ -177,12 +164,10 @@
           this.lastHash = hash;
           this.activeGame = remoteGame || null;
           this.gameState = remoteState;
-          this.log("Synced remote change: " + (remoteGame || "Lobby"));
+          this.log("Synced: " + (remoteGame || "Lobby"));
           this.renderCurrentView();
         }
-      } catch (e) {
-        this.log("Poll exception: " + e.message, true);
-      }
+      } catch (e) {}
     },
 
     renderCurrentView() {
@@ -223,7 +208,7 @@
         if (error) {
           this.log("Push error: " + error.message, true);
         } else {
-          this.log("Pushed state to cloud.");
+          this.log("Pushed to cloud.");
         }
       } catch (e) {
         this.log("Push exception: " + e.message, true);
@@ -251,7 +236,10 @@
               <span class="room-label">ROOM CODE</span>
               <h2 class="room-code-display">${esc(this.roomCode)}</h2>
             </div>
-            <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Copied!');">📋 Copy</button>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 10px;font-size:12px;" onclick="App.pollDB(); alert('Synced with cloud!');">🔄 Sync</button>
+              <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 10px;font-size:12px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Copied!');">📋 Copy</button>
+            </div>
           </div>
           <div style="margin: 16px 0;">
             <label style="font-size:11px; font-weight:800; color:#8E8E93;">PLAYERS IN ROOM:</label>
@@ -289,7 +277,7 @@
       if (gameId === "blind-rank") this.gameState.rankSet = picker.freshBlindRankSet(5);
       if (gameId === "guess-number") this.gameState.secretNumber = picker.freshNumber(1, 100);
 
-      this.log("Launching game: " + gameId);
+      this.log("Launching: " + gameId);
       await this.pushDB();
       this.renderActiveGame();
       window.scrollTo(0, 0);
@@ -309,7 +297,7 @@
       this.gameState.choices = this.gameState.choices || {};
       this.gameState.choices[this.myId] = val.toString().trim();
 
-      this.log("Submitted choice: " + val);
+      this.log("Choice: " + val);
       await this.pushDB();
       this.renderActiveGame();
 
@@ -408,7 +396,10 @@
           </div>
           ${body}
           ${this.renderComparison()}
-          <button class="btn-action" style="margin-top:16px;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
+          <div style="display:flex;gap:8px;margin-top:16px;">
+            <button class="btn-primary" style="flex:1;" onclick="App.pollDB(); alert('Synced!');">🔄 Force Sync</button>
+            <button class="btn-action" style="flex:1;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
+          </div>
           <div id="debug-hud" style="margin-top:14px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">${esc(this.lastLog)}</div>
         </div>
       `;
