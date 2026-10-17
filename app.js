@@ -304,11 +304,11 @@
 
     async submitChoice(val) {
       if (!val || !val.toString().trim()) { alert("Please enter or select an answer."); return; }
-      
+
       await this.pollDB();
       this.gameState.choices = this.gameState.choices || {};
       this.gameState.choices[this.myId] = val.toString().trim();
-      
+
       this.log("Submitted choice: " + val);
       await this.pushDB();
       this.renderActiveGame();
