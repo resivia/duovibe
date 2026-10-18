@@ -20,7 +20,9 @@
   function getClient() {
     if (window.sb) return window.sb;
     if (window.supabase && typeof window.supabase.createClient === "function") {
-      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        realtime: { params: { eventsPerSecond: 10 } }
+      });
       return window.sb;
     }
     return null;
@@ -34,12 +36,20 @@
     activeGame: null,
     gameState: { choices: {}, players: {}, hostId: null, streak: 0, currentPrompt: null, secretWord: null, secretSetter: null, rankSet: null },
     pollTimer: null,
+    realtimeChannel: null,
     lastHash: "",
     celebrated: false,
     
     init() {
       getClient();
       this.renderHome();
+
+      // WAKE-UP LISTENER: Instantly syncs when user tabs back or unlocks phone
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && this.roomCode) {
+          this.pollDB();
+        }
+      });
     },
 
     isHost() { return this.gameState.hostId === this.myId; },
@@ -142,10 +152,44 @@
           this.activeGame = room.current_game || null;
           this.gameState = state;
         }
+
+        // Setup Hybrid Realtime WebSockets + Polling Backup
+        this.setupRealtimeSubscription(code);
+
         if (this.pollTimer) clearInterval(this.pollTimer);
-        this.pollTimer = setInterval(() => this.pollDB(), 800);
+        this.pollTimer = setInterval(() => this.pollDB(), 2000); // Backed up by 2s poll
+        
         this.renderLobby();
-      } catch (e) {}
+      } catch (e) { console.error("Join error:", e); }
+    },
+
+    setupRealtimeSubscription(code) {
+      const sb = getClient();
+      if (!sb) return;
+
+      if (this.realtimeChannel) {
+        try { sb.removeChannel(this.realtimeChannel); } catch(e){}
+      }
+
+      this.realtimeChannel = sb.channel("duovibe_live_" + code, {
+        config: { broadcast: { self: false } }
+      });
+
+      this.realtimeChannel
+        .on("broadcast", { event: "state_sync" }, () => {
+          this.pollDB(); // Instant update when partner makes a move!
+        })
+        .subscribe();
+    },
+
+    broadcastSync() {
+      if (this.realtimeChannel) {
+        this.realtimeChannel.send({
+          type: "broadcast",
+          event: "state_sync",
+          payload: { sender: this.myId }
+        });
+      }
     },
 
     async pollDB() {
@@ -222,6 +266,9 @@
         this.lastHash = JSON.stringify({ g: currentGame, s: state });
 
         await sb.from("rooms").update({ current_game: currentGame, game_state: state }).eq("id", this.roomCode);
+        
+        // Broadcast instant websocket notification to partner!
+        this.broadcastSync();
       } catch (e) {}
     },
 
@@ -554,7 +601,7 @@
       keys.forEach(k => {
         const pObj = this.gameState.players && this.gameState.players[k];
         const name = (k === this.myId) ? "You" : (pObj ? (pObj.name || pObj) : "Partner");
-        
+
         let displayChoice = esc(choices[k]);
         if (!allAnswered && k !== this.myId) {
            displayChoice = `<span style="color:var(--secondary); font-weight:900; font-size:14px; letter-spacing:2px;">[ HIDDEN ]</span>`;
@@ -569,14 +616,14 @@
       if (allAnswered && keys.length >= 2) {
         const vals = keys.map(k => choices[k]);
         let isMatch = false;
-        
+
         if (this.activeGame === "percentage") isMatch = Math.abs(parseInt(vals[0]) - parseInt(vals[1])) <= 15;
         else if (this.activeGame === "mind-meld") isMatch = String(vals[0]).toLowerCase() === String(vals[1]).toLowerCase();
         else isMatch = vals[0] === vals[1];
 
         if (isMatch) {
           if (window.confetti && !this.celebrated) { window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } }); this.celebrated = true; }
-          
+
           let matchReason = "EXACT MATCH!";
           if (this.activeGame === "couple-compat") matchReason = `BOTH AGREED ON ${esc(vals[0]).toUpperCase()}!`;
           else if (this.activeGame === "percentage") matchReason = `WITHIN 15 POINTS!`;
