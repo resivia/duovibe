@@ -54,7 +54,7 @@
           <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Type name..." />
           
           <div style="margin-top:24px;">
-            <button class="btn-primary" onclick="App.createRoom()">Ã°Å¸â€˜â€˜ Create Room</button>
+            <button class="btn-primary" onclick="App.createRoom()"> Create Room</button>
             <div class="divider">OR JOIN EXISTING ROOM</div>
             <div style="display:flex; gap:10px;">
               <input id="input-room-code" placeholder="6-DIGIT" class="game-input" style="text-transform:uppercase; text-align:center; margin:0;" maxlength="6" />
@@ -214,7 +214,7 @@
         const pName = typeof p === "object" ? p.name : p;
         const isHost = id === this.gameState.hostId;
         items.push(`<span class="player-tag ${isHost ? 'host-tag' : 'player-tag-standard'}">
-          ${isHost ? 'Ã°Å¸â€˜â€˜' : 'Ã°Å¸â€˜Â¤'} ${esc(pName)}
+          ${isHost ? '' : 'Ã°Å¸â€˜Â¤'} ${esc(pName)}
         </span>`);
       });
       container.innerHTML = items.join(" ");
