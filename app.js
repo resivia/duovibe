@@ -5,6 +5,7 @@
     return String(val == null ? "" : val).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
 
+  // Persistent ID stops users from duplicating on refresh
   function getPersistentId() {
     let id = localStorage.getItem("duovibe_uid");
     if (!id) {
@@ -49,13 +50,13 @@
       c.innerHTML = `
         <div class="card">
           <h2>DuoVibe</h2>
-          <p style="margin-bottom:20px; font-weight:800;">Real-time games for long-distance couples & friends.</p>
-          <label style="font-size:12px; font-weight:900; color:var(--text-main);">YOUR PLAYER NAME</label>
+          <p style="margin-bottom:24px; font-weight:800; font-size:18px;">Are you on the same wavelength?</p>
+          <label style="font-size:14px; font-weight:900; color:var(--text-main);">YOUR PLAYER NAME</label>
           <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Type name..." />
           
-          <div style="margin-top:24px;">
-            <button class="btn-primary" onclick="App.createRoom()"> Create Room</button>
-            <div class="divider">OR JOIN EXISTING ROOM</div>
+          <div style="margin-top:30px;">
+            <button class="btn-primary" onclick="App.createRoom()">&#128081; Create Room</button>
+            <div class="divider">OR JOIN A FRIEND</div>
             <div style="display:flex; gap:10px;">
               <input id="input-room-code" placeholder="6-DIGIT" class="game-input" style="text-transform:uppercase; text-align:center; margin:0;" maxlength="6" />
               <button class="btn-secondary" style="width:120px;" onclick="App.joinRoomWithCode()">Join</button>
@@ -214,7 +215,7 @@
         const pName = typeof p === "object" ? p.name : p;
         const isHost = id === this.gameState.hostId;
         items.push(`<span class="player-tag ${isHost ? 'host-tag' : 'player-tag-standard'}">
-          ${isHost ? '' : 'Ã°Å¸â€˜Â¤'} ${esc(pName)}
+          ${isHost ? '&#128081;' : '&#128100;'} ${esc(pName)}
         </span>`);
       });
       container.innerHTML = items.join(" ");
@@ -228,29 +229,29 @@
 
       c.innerHTML = `
         <div class="card lobby-wrapper">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 24px;">
             <div>
-              <div style="font-size:11px; font-weight:900; color:var(--text-muted); letter-spacing:1px;">ROOM CODE</div>
-              <h2 style="color:var(--primary); cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Code copied!');">${esc(this.roomCode)} Ã°Å¸â€œâ€¹</h2>
+              <div style="font-size:12px; font-weight:900; color:var(--text-muted); letter-spacing:1px;">ROOM CODE</div>
+              <h2 style="color:var(--primary); cursor:pointer; font-size:32px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Code copied!');">${esc(this.roomCode)} &#128203;</h2>
             </div>
-            <div class="streak-badge">Ã°Å¸â€Â¥ ${streak}</div>
+            <div class="streak-badge">&#128293; ${streak}</div>
           </div>
           
-          <label style="font-size:11px; font-weight:900; color:var(--text-muted);">PLAYERS:</label>
-          <div id="connected-players-list" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
+          <label style="font-size:12px; font-weight:900; color:var(--text-muted);">PLAYERS:</label>
+          <div id="connected-players-list" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;"></div>
 
           ${isHost ? `
-            <h3 style="margin-top:24px;">Select Game</h3>
+            <h3 style="margin-top:30px;">Select Game</h3>
             <div class="games-grid">
-              <div class="game-mode-card" onclick="App.launchGame('secret-guess')"><span>Ã°Å¸â€¢ÂµÃ¯Â¸ÂÃ¢â‚¬ÂÃ¢â„¢â€šÃ¯Â¸Â</span><h4>Mastermind</h4></div>
-              <div class="game-mode-card" onclick="App.launchGame('would-rather')"><span>Ã°Å¸Â¤â€</span><h4>Would Rather</h4></div>
-              <div class="game-mode-card" onclick="App.launchGame('couple-compat')"><span>Ã¢ÂÂ¤Ã¯Â¸Â</span><h4>Compat Quiz</h4></div>
-              <div class="game-mode-card" onclick="App.launchGame('mind-meld')"><span>Ã°Å¸Â§Â </span><h4>Mind Meld</h4></div>
-              <div class="game-mode-card" onclick="App.launchGame('percentage')"><span>Ã°Å¸â€™Â¯</span><h4>1-100 Scale</h4></div>
-              <div class="game-mode-card" style="border-color:var(--primary); background:#EEF2FF;" onclick="App.launchGame('blind-rank')"><span>Ã°Å¸â€Â¢</span><h4 style="color:var(--primary);">Blind Rank</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('secret-guess')"><span>&#128373;</span><h4>Mastermind</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('would-rather')"><span>&#129300;</span><h4>Would Rather</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('couple-compat')"><span>&#10084;&#65039;</span><h4>Compat Quiz</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('mind-meld')"><span>&#129504;</span><h4>Mind Meld</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('percentage')"><span>&#128175;</span><h4>1-100 Scale</h4></div>
+              <div class="game-mode-card" style="border-color:var(--primary); background:#E0E7FF;" onclick="App.launchGame('blind-rank')"><span>&#128282;</span><h4 style="color:var(--primary);">Blind Rank</h4></div>
             </div>
           ` : `
-            <div style="margin-top:30px; text-align:center; padding:30px 20px; background:#F8FAFC; border:2px dashed var(--border); border-radius:var(--radius-md);">
+            <div style="margin-top:30px; text-align:center; padding:40px 20px; background:#F3F4F6; border:var(--border); border-style:dashed; border-radius:var(--radius);">
               <h3>Waiting for Host...</h3>
               <p>The host is choosing the next game. Sit tight.</p>
             </div>
@@ -289,7 +290,6 @@
 
       this.activeGame = gameId;
       this.gameState.choices = {};
-      
       this.gameState.currentPrompt = null;
       this.gameState.secretWord = null;
       this.gameState.secretSetter = null;
@@ -308,6 +308,7 @@
       this.renderLobby();
     },
 
+    // --- DRAFTING METHODS (ANY USER CAN CALL THESE) ---
     async submitCustomPrompt(val) {
       if (!val) return;
       if (typeof val === 'object' && (!val.a || !val.b)) return;
@@ -321,15 +322,6 @@
       let items = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
       while(items.length < 5) items.push("Empty");
       this.gameState.rankSet = items.slice(0,5);
-      this.gameState.currentPrompt = "ready";
-      await this.pushDB();
-      this.renderActiveGame();
-    },
-
-    async submitCustomSecret(val) {
-      if (!val || !val.trim()) return;
-      this.gameState.secretWord = val.trim();
-      this.gameState.secretSetter = this.myId;
       this.gameState.currentPrompt = "ready";
       await this.pushDB();
       this.renderActiveGame();
@@ -349,6 +341,7 @@
          this.gameState.rankSet = p.freshBlindRankSet();
          this.gameState.currentPrompt = "ready";
       } else if (g === "secret-guess") {
+         // Host automatically becomes the setter if random is chosen
          this.gameState.secretWord = p.nextItem("secretGuess", b.secretGuess);
          this.gameState.secretSetter = this.gameState.hostId;
          this.gameState.currentPrompt = "ready";
@@ -361,6 +354,15 @@
       if (!val || !val.toString().trim()) return;
       this.gameState.choices = this.gameState.choices || {};
       this.gameState.choices[this.myId] = val.toString().trim();
+      await this.pushDB();
+      this.renderActiveGame();
+    },
+
+    async hostSetSecret(val) {
+      if (!this.isHost()) return;
+      this.gameState.secretWord = val;
+      this.gameState.secretSetter = this.myId;
+      this.gameState.currentPrompt = "ready"; // signals the game can start
       await this.pushDB();
       this.renderActiveGame();
     },
@@ -379,46 +381,52 @@
     getDraftingBody() {
       const g = this.activeGame;
       let html = `
-        <div style="text-align:center; margin-bottom:20px;">
-          <h3 style="text-transform:uppercase; color:var(--primary); font-size:24px;">Draft Phase</h3>
-          <p style="font-size:13px; font-weight:800; color:var(--text-muted);">Anyone can write the prompt, or roll the dice!</p>
+        <div style="text-align:center; margin-bottom:24px;">
+          <h3 style="color:var(--primary); font-size:28px;">Draft Phase</h3>
+          <p style="font-size:14px; font-weight:800; color:var(--text-muted);">Write a custom prompt, or roll the dice!</p>
         </div>
       `;
                   
       if (g === "would-rather") {
          html += `
            <input id="draft-a" class="game-input" placeholder="Option 1 (e.g. Eat bugs)">
-           <div style="text-align:center; font-weight:900; color:var(--text-muted); margin:8px 0;">VS</div>
+           <div style="text-align:center; font-weight:900; color:var(--text-muted); margin:12px 0;">VS</div>
            <input id="draft-b" class="game-input" placeholder="Option 2 (e.g. Eat dirt)">
-           <button class="btn-primary" style="margin-top:16px;" onclick="App.submitCustomPrompt({a: document.getElementById('draft-a').value, b: document.getElementById('draft-b').value})">Lock In Custom</button>
+           <button class="btn-primary" style="margin-top:20px;" onclick="App.submitCustomPrompt({a: document.getElementById('draft-a').value, b: document.getElementById('draft-b').value})">Lock In Custom</button>
          `;
       } else if (g === "blind-rank") {
          html += `
-           <textarea id="draft-rank" class="game-input" placeholder="Type 5 items separated by commas" rows="3" style="resize:none; padding:16px;"></textarea>
-           <button class="btn-primary" style="margin-top:16px;" onclick="App.submitCustomRank(document.getElementById('draft-rank').value)">Lock In Custom</button>
+           <textarea id="draft-rank" class="game-input" placeholder="Type 5 items separated by commas (e.g. Pizza, Cats, Sleep, Money, Coffee)" rows="3" style="resize:none; padding:16px;"></textarea>
+           <button class="btn-primary" style="margin-top:20px;" onclick="App.submitCustomRank(document.getElementById('draft-rank').value)">Lock In Custom</button>
          `;
       } else if (g === "secret-guess") {
-         html += `
-           <div style="background:#FEF2F2; padding:12px; border-radius:8px; border:2px dashed #EF4444; margin-bottom:12px;">
-             <p style="text-align:center; font-weight:900; color:#DC2626; margin:0;">Ã°Å¸Å¡Â¨ Hide screen! Type a secret word.</p>
-           </div>
-           <input id="draft-secret" class="game-input" placeholder="Type secret word...">
-           <button class="btn-primary" style="margin-top:16px; background:var(--danger);" onclick="App.submitCustomSecret(document.getElementById('draft-secret').value)">Set Secret Word</button>
-         `;
+         // The drafting phase for secret guess is selecting from the 50 items if you are host
+         if (this.isHost()) {
+            const items = window.Picker.get50Items();
+            let gridHtml = `<div class="options-grid">`;
+            items.forEach(item => {
+              gridHtml += `<div class="option-chip" onclick="App.hostSetSecret('${esc(item)}')">${esc(item)}</div>`;
+            });
+            gridHtml += `</div>`;
+            html = `<h3 style="text-align:center;">Pick the Secret!</h3><p style="text-align:center;">Choose 1 out of 50 for the player to guess.</p>${gridHtml}`;
+         } else {
+            html = `<div style="text-align:center; padding:40px 20px; background:#F3F4F6; border:var(--border); border-style:dashed; border-radius:var(--radius);"><h3>Mastermind</h3><p>Host is picking a secret from 50 options...</p></div>`;
+         }
+         return html; // Return early for secret guess
       } else {
          let ph = "Type a scenario/question...";
-         if (g === "mind-meld") ph = "Type a category...";
-         if (g === "percentage") ph = "Type a 1-100 scale question...";
+         if (g === "mind-meld") ph = "Type a category (e.g. Name a fast food chain)";
+         if (g === "percentage") ph = "Type a 1-100 question (e.g. How good is...)";
          
          html += `
            <input id="draft-text" class="game-input" placeholder="${ph}">
-           <button class="btn-primary" style="margin-top:16px;" onclick="App.submitCustomPrompt(document.getElementById('draft-text').value)">Lock In Custom</button>
+           <button class="btn-primary" style="margin-top:20px;" onclick="App.submitCustomPrompt(document.getElementById('draft-text').value)">Lock In Custom</button>
          `;
       }
 
       html += `
         <div class="divider">OR</div>
-        <button class="btn-secondary" style="border-color:var(--primary); color:var(--primary);" onclick="App.rollRandomPrompt()">Ã°Å¸Å½Â² Pick Random For Us</button>
+        <button class="btn-secondary" style="border-color:var(--primary); color:var(--primary);" onclick="App.rollRandomPrompt()">Random Prompt</button>
       `;
       return html;
     },
@@ -431,21 +439,27 @@
       if (isSetter) {
         return `
           <h3 style="text-align:center;">You set the secret!</h3>
-          <p style="text-align:center; font-size:16px; font-weight:900; color:var(--danger); margin:16px 0; text-transform:uppercase;">Secret: ${esc(secret)}</p>
-          <div style="padding:30px 20px; text-align:center; background:#F8FAFC; border:2px dashed var(--border); border-radius:var(--radius-md);">
-            <h4>Waiting for partner to guess...</h4>
+          <p style="text-align:center; font-size:18px; font-weight:900; color:var(--danger); margin:16px 0; text-transform:uppercase; border:var(--border); padding:16px; border-radius:var(--radius);">Secret: ${esc(secret)}</p>
+          <div style="padding:40px 20px; text-align:center; background:#F3F4F6; border:var(--border); border-style:dashed; border-radius:var(--radius);">
+            <h4>Waiting for them to guess...</h4>
           </div>
         `;
       } else {
         if (!myChoice) {
+          const items = window.Picker.get50Items();
+          let gridHtml = `<div class="options-grid">`;
+          items.forEach(item => {
+            gridHtml += `<div class="option-chip" onclick="App.submitChoice('${esc(item)}')">${esc(item)}</div>`;
+          });
+          gridHtml += `</div>`;
+          
           return `
-            <h3 style="text-align:center;">Mastermind Ã°Å¸â€¢ÂµÃ¯Â¸ÂÃ¢â‚¬ÂÃ¢â„¢â€šÃ¯Â¸Â</h3>
-            <p style="text-align:center; font-size:13px; font-weight:800; color:var(--text-muted); margin-bottom:16px;">Try to guess the secret word or phrase!</p>
-            <input id="sg-guess" class="game-input" placeholder="Type your guess...">
-            <button class="btn-primary" style="margin-top:16px;" onclick="App.submitChoice(document.getElementById('sg-guess').value)">Lock In Guess</button>
+            <h3 style="text-align:center;">Mastermind &#128373;</h3>
+            <p style="text-align:center; font-size:14px; font-weight:800; color:var(--text-muted); margin-bottom:16px;">The host locked in 1 of these 50 items. Pick one to guess!</p>
+            ${gridHtml}
           `;
         } else {
-          return `<h3 style="text-align:center;">Guess Locked In</h3><p style="text-align:center; font-size:16px; font-weight:900; color:var(--primary); margin:16px 0; text-transform:uppercase;">You guessed: ${esc(myChoice)}</p>`;
+          return `<h3 style="text-align:center;">Guess Locked In</h3><p style="text-align:center; font-size:18px; font-weight:900; color:var(--primary); margin:16px 0; text-transform:uppercase; border:var(--border); padding:16px; border-radius:var(--radius);">You guessed: ${esc(myChoice)}</p>`;
         }
       }
     },
@@ -459,37 +473,37 @@
          const guesserId = Object.keys(this.gameState.players || {}).find(k => k !== setterId);
          const guess = guesserId ? choices[guesserId] : null;
          
-         if (!guess) return `<div class="comparison-bar" style="text-align:center;font-weight:900;margin-top:20px;">Waiting for guess...</div>`;
+         if (!guess) return `<div class="comparison-bar" style="text-align:center;font-weight:900;margin-top:24px;font-size:18px;">Waiting for guess...</div>`;
          
-         let html = '<div class="comparison-bar" style="margin-top:24px; background:#F8FAFC; padding:20px; border-radius:var(--radius-md); border:2px solid var(--border);">';
+         let html = '<div class="comparison-bar" style="margin-top:24px; background:#F3F4F6; padding:24px; border-radius:var(--radius); border:var(--border); box-shadow:var(--shadow-hard);">';
          html += `<p style="text-align:center; font-weight:900; font-size:18px;">Secret was: <span style="color:var(--danger);">${esc(this.gameState.secretWord)}</span></p>`;
-         html += `<p style="text-align:center; font-weight:900; font-size:18px; margin-top:8px;">Guess was: <span>${esc(guess)}</span></p>`;
+         html += `<p style="text-align:center; font-weight:900; font-size:18px; margin-top:12px;">Guess was: <span>${esc(guess)}</span></p>`;
          
          if (String(guess).toLowerCase() === String(this.gameState.secretWord).toLowerCase()) {
             if (window.confetti) window.confetti();
-            html += `<div class="match-box">Ã°Å¸â€Â¥ MIND READER! Ã°Å¸â€Â¥</div>`;
+            html += `<div class="match-box">&#128293; MIND READER! &#128293;</div>`;
          } else {
-            html += `<div class="penalty-box"><strong style="font-size:24px;">Ã¢ÂÅ’ FAILED</strong></div>`;
+            html += `<div class="penalty-box"><strong style="font-size:28px;">&#10060; FAILED</strong></div>`;
          }
          html += '</div>';
          return html;
       }
 
-      if (keys.length === 0) return '<div class="comparison-bar" style="text-align:center;font-weight:700;color:var(--text-muted);margin-top:20px;">Waiting for answers...</div>';
+      if (keys.length === 0) return '<div class="comparison-bar" style="text-align:center;font-weight:900;color:var(--text-muted);margin-top:24px;">Waiting for answers...</div>';
 
       if (this.activeGame === "blind-rank") {
         const p1Done = choices[keys[0]] && Object.keys(choices[keys[0]]).length === 5;
         const p2Done = keys.length > 1 && choices[keys[1]] && Object.keys(choices[keys[1]]).length === 5;
         
-        if (!p1Done || (keys.length > 1 && !p2Done)) return '<div class="comparison-bar" style="text-align:center;margin-top:20px;font-weight:900;">Ranking in progress... Ã¢ÂÂ³</div>';
+        if (!p1Done || (keys.length > 1 && !p2Done)) return '<div class="comparison-bar" style="text-align:center;margin-top:24px;font-weight:900;font-size:18px;">Ranking in progress... &#8987;</div>';
 
-        let html = '<div class="comparison-bar" style="display:flex; gap:16px; margin-top:20px;">';
+        let html = '<div class="comparison-bar" style="display:flex; gap:16px; margin-top:24px;">';
         keys.forEach(k => {
           const pObj = this.gameState.players && this.gameState.players[k];
           const name = (k === this.myId) ? "You" : (pObj ? (pObj.name || pObj) : "Partner");
           html += `<div style="flex:1;"><strong>${esc(name)}</strong>`;
           for(let i=1; i<=5; i++) {
-            html += `<div style="font-size:13px; font-weight:800; background:#F8FAFC; border: 2px solid var(--border); margin-top:8px; padding:10px; border-radius:8px;">${i}. ${esc(choices[k][i])}</div>`;
+            html += `<div style="font-size:14px; font-weight:900; background:#F3F4F6; border: var(--border); margin-top:10px; padding:12px; border-radius:8px; box-shadow:3px 3px 0px #000;">${i}. ${esc(choices[k][i])}</div>`;
           }
           html += `</div>`;
         });
@@ -497,12 +511,12 @@
         return html;
       }
 
-      let html = '<div class="comparison-bar" style="margin-top:24px; background:#F8FAFC; padding:20px; border-radius:var(--radius-md); border:2px solid var(--border);">';
+      let html = '<div class="comparison-bar" style="margin-top:24px; background:#F3F4F6; padding:24px; border-radius:var(--radius); border:var(--border); box-shadow:var(--shadow-hard);">';
       keys.forEach(k => {
         const pObj = this.gameState.players && this.gameState.players[k];
         const name = (k === this.myId) ? "You" : (pObj ? (pObj.name || pObj) : "Partner");
-        html += `<div style="display:flex; justify-content:space-between; margin-bottom:12px; padding-bottom:12px; border-bottom:2px solid var(--border);">
-                   <strong style="color:var(--text-muted);">${esc(name)}:</strong>
+        html += `<div style="display:flex; justify-content:space-between; margin-bottom:14px; padding-bottom:14px; border-bottom:3px solid #000;">
+                   <strong style="color:var(--text-main);">${esc(name)}:</strong>
                    <span style="font-weight:900; text-align:right;">${esc(choices[k])}</span>
                  </div>`;
       });
@@ -516,13 +530,13 @@
 
         if (isMatch) {
           if (window.confetti) window.confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
-          html += `<div class="match-box">Ã°Å¸â€Â¥ VIBE MATCH! Ã°Å¸â€Â¥</div>`;
+          html += `<div class="match-box">&#128293; VIBE MATCH! &#128293;</div>`;
         } else {
-          html += `<div style="text-align:center;font-weight:900;margin-top:16px;color:var(--danger);font-size:18px;">Ã°Å¸â€™â‚¬ STREAK BROKEN</div>`;
+          html += `<div style="text-align:center;font-weight:900;margin-top:20px;color:var(--danger);font-size:20px;">&#10060; STREAK BROKEN</div>`;
           if ((this.gameState.streak || 0) >= 2) {
             const dares = window.BANKS.dares || ["Take a drink!"];
             const dareStr = dares[(this.roomCode.charCodeAt(0) + vals[0].length) % dares.length];
-            html += `<div class="penalty-box"><strong style="font-size:16px;letter-spacing:1px;text-transform:uppercase;">Ã°Å¸Å¡Â¨ Penalty Ã°Å¸Å¡Â¨</strong><br/><span style="font-weight:800;font-size:16px;margin-top:8px;display:block;">${esc(dareStr)}</span></div>`;
+            html += `<div class="penalty-box"><strong style="font-size:18px;letter-spacing:1px;text-transform:uppercase;">&#128680; Penalty &#128680;</strong><br/><span style="font-weight:900;font-size:18px;margin-top:12px;display:block;">${esc(dareStr)}</span></div>`;
           }
         }
       }
@@ -555,20 +569,20 @@
         let slotsHtml = "";
         for(let i=1; i<=5; i++) {
           if (myRanks[i]) {
-            slotsHtml += `<div style="background:#E2E8F0; padding:16px; margin-bottom:8px; border-radius:var(--radius-sm); color:#64748B; font-size:14px; text-decoration:line-through; font-weight:800; border:2px solid #CBD5E1;">${i}. ${esc(myRanks[i])}</div>`;
+            slotsHtml += `<div style="background:#E5E7EB; padding:18px; margin-bottom:10px; border-radius:var(--radius); color:#4B5563; font-size:16px; text-decoration:line-through; font-weight:900; border:var(--border);">${i}. ${esc(myRanks[i])}</div>`;
           } else {
-            slotsHtml += `<button class="btn-secondary" style="margin-bottom:8px; justify-content:flex-start; border-color:var(--primary); color:var(--primary);" onclick="App.submitBlindRank(${i}, '${esc(currentItem)}')">Lock in Slot #${i}</button>`;
+            slotsHtml += `<button class="btn-secondary" style="margin-bottom:10px; justify-content:flex-start; color:var(--primary);" onclick="App.submitBlindRank(${i}, '${esc(currentItem)}')">Lock in Slot #${i}</button>`;
           }
         }
         return `
-          <div style="background:var(--primary); color:white; padding:24px; border-radius:var(--radius-md); margin-bottom:20px; text-align:center;">
-            <span style="font-size:11px; font-weight:900; opacity:0.9; letter-spacing:1px; text-transform:uppercase;">ITEM ${numAnswered + 1} OF 5</span>
-            <h2 style="margin:8px 0 0 0; font-size:28px;">${esc(currentItem)}</h2>
+          <div style="background:var(--primary); color:white; padding:28px; border-radius:var(--radius); margin-bottom:24px; text-align:center; box-shadow: var(--shadow-hard); border:var(--border);">
+            <span style="font-size:12px; font-weight:900; opacity:0.9; letter-spacing:2px; text-transform:uppercase;">ITEM ${numAnswered + 1} OF 5</span>
+            <h2 style="margin:10px 0 0 0; font-size:32px;">${esc(currentItem)}</h2>
           </div>
           ${slotsHtml}
         `;
       } else {
-        return `<div style="padding:24px; text-align:center; background:#D1FAE5; color:#065F46; border-radius:var(--radius-md); margin:16px 0; font-weight:900; font-size:18px;">Ã¢Å“â€¦ Locked in!</div>`;
+        return `<div style="padding:30px; text-align:center; background:#10B981; color:white; border-radius:var(--radius); border:var(--border); margin:20px 0; font-weight:900; font-size:22px; box-shadow:var(--shadow-hard);">&#9989; Locked in!</div>`;
       }
     },
 
@@ -581,9 +595,11 @@
       const streak = this.gameState.streak || 0;
       let body = "";
       
+      // IF DRAFTING PHASE
       if (!this.gameState.currentPrompt) {
          body = this.getDraftingBody();
       } else {
+         // GAMEPLAY PHASE
          const cur = this.gameState.currentPrompt || { a: "A", b: "B" };
          const myChoice = (this.gameState.choices && this.gameState.choices[this.myId]) ? this.gameState.choices[this.myId] : null;
 
@@ -595,7 +611,7 @@
            switch (this.activeGame) {
              case "would-rather":
                body = `
-                 <h3 style="margin-bottom:16px; text-align:center;">Would You Rather...</h3>
+                 <h3 style="margin-bottom:20px; text-align:center;">Would You Rather...</h3>
                  <button class="btn-choice ${myChoice === cur.a ? "selected" : ""}" onclick="App.submitChoice('${esc(cur.a)}')">${esc(cur.a)}</button>
                  <div class="divider">OR</div>
                  <button class="btn-choice ${myChoice === cur.b ? "selected" : ""}" onclick="App.submitChoice('${esc(cur.b)}')">${esc(cur.b)}</button>
@@ -604,45 +620,45 @@
              case "red-green-flag":
                body = `
                  <h3 style="text-align:center;">Red or Green Flag?</h3>
-                 <div style="background:#F8FAFC; padding:24px; border-radius:var(--radius-md); text-align:center; margin:20px 0; border:2px solid var(--border);">
-                   <p style="font-weight:900; font-size:18px; margin:0; color:var(--text-main);">"${esc(cur)}"</p>
+                 <div style="background:#F3F4F6; padding:30px; border-radius:var(--radius); text-align:center; margin:24px 0; border:var(--border); box-shadow:var(--shadow-hard);">
+                   <p style="font-weight:900; font-size:20px; margin:0; color:var(--text-main);">"${esc(cur)}"</p>
                  </div>
-                 <div style="display:flex; gap:10px;">
-                   <button style="flex:1; background:#FEF2F2; color:#DC2626;" class="btn-choice ${myChoice === 'Ã°Å¸Å¡Â© Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('Ã°Å¸Å¡Â© Red Flag')">Ã°Å¸Å¡Â© Red</button>
-                   <button style="flex:1; background:#ECFDF5; color:#059669;" class="btn-choice ${myChoice === 'Ã°Å¸Å’Â¿ Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('Ã°Å¸Å’Â¿ Green Flag')">Ã°Å¸Å’Â¿ Green</button>
+                 <div style="display:flex; gap:12px;">
+                   <button style="flex:1; background:#FEF2F2; color:#DC2626;" class="btn-choice ${myChoice === 'Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('Red Flag')">&#128681; Red</button>
+                   <button style="flex:1; background:#ECFDF5; color:#059669;" class="btn-choice ${myChoice === 'Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('Green Flag')">&#127807; Green</button>
                  </div>
                `;
                break;
              case "couple-compat":
                body = `
                  <h3 style="text-align:center;">Compatibility Quiz</h3>
-                 <p style="font-weight:900;margin:24px 0;font-size:20px;text-align:center;line-height:1.3;">${esc(cur)}</p>
-                 <div style="display:flex; gap:12px;">
-                   <button style="flex:1; padding:32px 10px;" class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')"><span style="font-size:32px;display:block;margin-bottom:8px;">Ã°Å¸â„¢â€¹Ã¢â‚¬ÂÃ¢â„¢â€šÃ¯Â¸Â</span> Me</button>
-                   <button style="flex:1; padding:32px 10px;" class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')"><span style="font-size:32px;display:block;margin-bottom:8px;">Ã°Å¸â„¢â€¹Ã¢â‚¬ÂÃ¢â„¢â‚¬Ã¯Â¸Â</span> Partner</button>
+                 <p style="font-weight:900;margin:24px 0;font-size:22px;text-align:center;line-height:1.4;">${esc(cur)}</p>
+                 <div style="display:flex; gap:16px;">
+                   <button style="flex:1; padding:40px 10px;" class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')"><span style="font-size:40px;display:block;margin-bottom:12px;">&#128587;&#8205;&#9794;&#65039;</span> Me</button>
+                   <button style="flex:1; padding:40px 10px;" class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')"><span style="font-size:40px;display:block;margin-bottom:12px;">&#128587;&#8205;&#9792;&#65039;</span> Partner</button>
                  </div>
                `;
                break;
              case "mind-meld":
                body = `
-                 <h3 style="text-align:center;">Mind Meld Ã°Å¸Â§Â </h3>
-                 <div style="background:var(--accent); color:white; padding:24px; border-radius:var(--radius-md); text-align:center; margin:20px 0;">
-                   <p style="font-weight:900;font-size:20px;margin:0;color:white;">${esc(cur)}</p>
+                 <h3 style="text-align:center;">Mind Meld &#129504;</h3>
+                 <div style="background:var(--accent); color:white; padding:30px; border-radius:var(--radius); text-align:center; margin:24px 0; border:var(--border); box-shadow:var(--shadow-hard);">
+                   <p style="font-weight:900;font-size:24px;margin:0;">${esc(cur)}</p>
                  </div>
-                 <p style="font-size:13px; font-weight:800; color:var(--text-muted); text-align:center; margin-bottom:16px;">Type the first thing that comes to mind.</p>
-                 <div style="display:flex; gap:10px;">
+                 <p style="font-size:14px; font-weight:800; color:var(--text-muted); text-align:center; margin-bottom:20px;">Type the first thing that comes to mind.</p>
+                 <div style="display:flex; gap:12px;">
                    <input type="text" id="meld-input" class="game-input" placeholder="Your answer..." style="flex:1; margin:0;">
-                   <button class="btn-primary" style="width:auto; padding:0 24px;" onclick="App.submitChoice(document.getElementById('meld-input').value)">Lock In</button>
+                   <button class="btn-primary" style="width:auto; padding:0 30px;" onclick="App.submitChoice(document.getElementById('meld-input').value)">Lock In</button>
                  </div>
                `;
                break;
              case "percentage":
                body = `
                  <h3 style="text-align:center;">The 1-100 Scale</h3>
-                 <p style="font-weight:900;margin:24px 0;font-size:18px;text-align:center;">${esc(cur)}</p>
+                 <p style="font-weight:900;margin:28px 0;font-size:22px;text-align:center;">${esc(cur)}</p>
                  <div class="slider-container">
                    <input type="range" id="perc-slider" min="0" max="100" value="50" oninput="document.getElementById('perc-val').innerText = this.value">
-                   <div style="text-align:center; font-size:48px; font-weight:900; color:var(--primary); margin:20px 0;" id="perc-val">50</div>
+                   <div style="text-align:center; font-size:54px; font-weight:900; color:var(--primary); margin:24px 0; text-shadow: 3px 3px 0px #000;" id="perc-val">50</div>
                    <button class="btn-primary" onclick="App.submitChoice(document.getElementById('perc-slider').value)">Submit Rating</button>
                  </div>
                `;
@@ -653,16 +669,16 @@
 
       c.innerHTML = `
         <div class="card active-game-wrapper">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid var(--border);">
-            ${isHost ? `<button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 16px;font-size:13px;border-radius:10px;" onclick="App.exitGame()">Lobby</button>` : `<span style="font-size:13px;font-weight:900;color:var(--text-muted);text-transform:uppercase;">HOST CONTROLS ROUND</span>`}
-            <div class="streak-badge">Ã°Å¸â€Â¥ ${streak}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:20px;border-bottom:var(--border);">
+            ${isHost ? `<button class="btn-secondary" style="width:auto;min-height:40px;padding:8px 20px;font-size:14px;border-radius:12px;" onclick="App.exitGame()">Lobby</button>` : `<span style="font-size:14px;font-weight:900;color:var(--text-muted);text-transform:uppercase;">HOST CONTROLS ROUND</span>`}
+            <div class="streak-badge">&#128293; ${streak}</div>
           </div>
           
           ${body}
           ${this.gameState.currentPrompt ? this.renderComparison() : ''}
           
           ${isHost && this.gameState.currentPrompt ? `
-            <button class="btn-primary" style="margin-top:30px; background:var(--text-main);" onclick="App.launchGame('${this.activeGame}')">Next Round Ã¢â€ â€™</button>
+            <button class="btn-primary" style="margin-top:30px; background:#000;" onclick="App.launchGame('${this.activeGame}')">Next Round &#10140;</button>
           ` : ``}
         </div>
       `;
