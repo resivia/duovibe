@@ -2,12 +2,7 @@
   "use strict";
 
   function esc(val) {
-    return String(val == null ? "" : val)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    return String(val == null ? "" : val).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
 
   const SUPABASE_URL = (window.CONFIG && window.CONFIG.SUPABASE_URL) || "https://euqrzxxldlsbhuyjuleo.supabase.co";
@@ -28,66 +23,39 @@
     myRole: "player",
     roomCode: null,
     activeGame: null,
-    gameState: { choices: {}, players: {}, hostId: null },
+    gameState: { choices: {}, players: {}, hostId: null, streak: 0 },
     pollTimer: null,
     lastHash: "",
-    lastLog: "App ready.",
+    lastLog: "UI Upgraded.",
 
     init() {
-      try {
-        getClient();
-        this.renderHome();
-      } catch (err) {
-        console.error("Init error:", err);
-      }
+      getClient();
+      this.renderHome();
     },
 
-    isHost() {
-      return this.gameState.hostId === this.myId;
-    },
-
-    log(msg, isErr = false) {
-      console.log("DuoVibe:", msg);
-      this.lastLog = (isErr ? "[ERR] " : "[OK] ") + msg;
-      const dbg = document.getElementById("debug-hud");
-      if (dbg) dbg.textContent = this.lastLog;
-    },
+    isHost() { return this.gameState.hostId === this.myId; },
+    log(msg) { console.log("DuoVibe:", msg); },
 
     renderHome() {
       const c = document.getElementById("main-content");
       if (!c) return;
       c.innerHTML = `
-        <div class="home-card">
-          <h2>Welcome to DuoVibe 🎮</h2>
-          <p>Play live social media games with your partner or friends.</p>
-          <div style="margin-top:16px;">
-            <label style="font-size:13px; font-weight:800; color:#666;">YOUR NAME</label>
-            <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Your name" />
-          </div>
-          <div style="margin-top:16px;">
+        <div class="card">
+          <h2>Welcome to DuoVibe ⚡</h2>
+          <p style="margin-bottom:20px;">Test your vibe. Build your streak.</p>
+          <label style="font-size:12px; font-weight:800; color:var(--text-muted);">YOUR NAME</label>
+          <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Your name" />
+          
+          <div style="margin-top:24px;">
             <button class="btn-primary" onclick="App.createRoom()">👑 Create Room (Host)</button>
-            <div class="divider">OR JOIN AS PLAYER</div>
-            <div style="display:flex; gap:8px;">
-              <input id="input-room-code" placeholder="6-DIGIT CODE" class="game-input" style="text-transform:uppercase; letter-spacing:2px; text-align:center;" maxlength="6" />
-              <button class="btn-secondary" style="width:110px;" onclick="App.joinRoomWithCode()">Join</button>
+            <div class="divider">OR JOIN</div>
+            <div style="display:flex; gap:10px;">
+              <input id="input-room-code" placeholder="6-DIGIT" class="game-input" style="text-transform:uppercase; letter-spacing:2px; text-align:center; margin:0;" maxlength="6" />
+              <button class="btn-secondary" style="width:120px;" onclick="App.joinRoomWithCode()">Join</button>
             </div>
           </div>
-          <button class="btn-secondary" style="margin-top:16px; background:#FAF9F7; border:1px solid #E8E6E3; font-size:12px;" onclick="App.testConnection()">⚡ Test Connection</button>
-          <div id="debug-hud" style="margin-top:12px; font-size:11px; background:#1A1A1A; color:#00FF66; padding:10px; border-radius:10px; font-family:monospace; text-align:left; word-break:break-all;">Ready</div>
         </div>
       `;
-    },
-
-    async testConnection() {
-      const sb = getClient();
-      if (!sb) { alert("Supabase failed to load."); return; }
-      try {
-        const { error } = await sb.from("rooms").select("id").limit(1);
-        if (error) alert("DB Error: " + error.message);
-        else alert("Connected to Supabase rooms table!");
-      } catch (err) {
-        alert("Exception: " + err.message);
-      }
     },
 
     saveName() {
@@ -117,48 +85,34 @@
     async joinRoom(code, creatingAsHost) {
       this.roomCode = code;
       this.activeGame = null;
-      this.gameState = { choices: {}, players: {}, hostId: creatingAsHost ? this.myId : null };
+      this.gameState = { choices: {}, players: {}, hostId: creatingAsHost ? this.myId : null, streak: 0 };
       this.renderLobby();
 
       const sb = getClient();
       if (!sb) return;
 
       try {
-        let { data: room, error } = await sb.from("rooms").select("*").eq("id", code).maybeSingle();
+        let { data: room } = await sb.from("rooms").select("*").eq("id", code).maybeSingle();
         if (!room) {
-          if (!creatingAsHost) {
-            alert("Room " + code + " not found. Ask the host to create it first!");
-            this.renderHome();
-            return;
-          }
-          const state = {
-            hostId: this.myId,
-            players: { [this.myId]: { name: this.myName, role: "host" } },
-            choices: {}
-          };
+          if (!creatingAsHost) { alert("Room not found."); this.renderHome(); return; }
+          const state = { hostId: this.myId, players: { [this.myId]: { name: this.myName, role: "host" } }, choices: {}, streak: 0 };
           await sb.from("rooms").insert({ id: code, current_game: "", game_state: state });
           this.gameState = state;
         } else {
-          let state = room.game_state || { choices: {}, players: {}, hostId: null };
+          let state = room.game_state || { choices: {}, players: {}, hostId: null, streak: 0 };
           state.players = state.players || {};
           if (!state.hostId && creatingAsHost) state.hostId = this.myId;
-
-          const assignedRole = (state.hostId === this.myId) ? "host" : "player";
-          this.myRole = assignedRole;
-          state.players[this.myId] = { name: this.myName, role: assignedRole };
-
+          
+          this.myRole = (state.hostId === this.myId) ? "host" : "player";
+          state.players[this.myId] = { name: this.myName, role: this.myRole };
           await sb.from("rooms").update({ game_state: state, updated_at: new Date().toISOString() }).eq("id", code);
-
           this.activeGame = room.current_game || null;
           this.gameState = state;
         }
-
         if (this.pollTimer) clearInterval(this.pollTimer);
         this.pollTimer = setInterval(() => this.pollDB(), 1200);
         this.renderLobby();
-      } catch (e) {
-        console.error("Join error:", e);
-      }
+      } catch (e) { console.error("Join error:", e); }
     },
 
     async pollDB() {
@@ -169,7 +123,7 @@
         if (error || !room) return;
 
         const remoteGame = room.current_game || "";
-        const remoteState = room.game_state || { choices: {}, players: {}, hostId: null };
+        const remoteState = room.game_state || { choices: {}, players: {}, hostId: null, streak: 0 };
         remoteState.players = remoteState.players || {};
         remoteState.choices = remoteState.choices || {};
 
@@ -179,15 +133,16 @@
           needsSync = true;
         }
 
-        if (this.gameState.choices && this.gameState.choices[this.myId]) {
-          if (remoteState.choices[this.myId] !== this.gameState.choices[this.myId]) {
-            remoteState.choices[this.myId] = this.gameState.choices[this.myId];
+        const myLocalChoices = this.gameState.choices[this.myId];
+        if (myLocalChoices !== undefined) {
+          if (JSON.stringify(remoteState.choices[this.myId]) !== JSON.stringify(myLocalChoices)) {
+            remoteState.choices[this.myId] = myLocalChoices;
             needsSync = true;
           }
         }
 
         if (needsSync) {
-          await sb.from("rooms").update({ game_state: remoteState, updated_at: new Date().toISOString() }).eq("id", this.roomCode);
+          await sb.from("rooms").update({ game_state: remoteState }).eq("id", this.roomCode);
         }
 
         const hash = JSON.stringify({ g: remoteGame, s: remoteState });
@@ -202,44 +157,35 @@
 
     renderCurrentView() {
       if (this.activeGame) {
-        if (!document.querySelector(".active-game-wrapper")) {
-          this.renderActiveGame();
-        } else {
-          this.updateGameChoicesUI();
-        }
+        if (!document.querySelector(".active-game-wrapper")) this.renderActiveGame();
+        else this.updateGameChoicesUI();
       } else {
-        if (!document.querySelector(".lobby-card")) {
-          this.renderLobby();
-        } else {
-          this.updatePlayersUI(this.gameState.players || {});
-        }
+        if (!document.querySelector(".lobby-wrapper")) this.renderLobby();
+        else this.updatePlayersUI(this.gameState.players || {});
       }
     },
 
-    async pushDB() {
+    async pushDB(evaluateStreak = false) {
       const sb = getClient();
       if (!this.roomCode || !sb) return;
       try {
         let { data: room } = await sb.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
         let state = room ? (room.game_state || {}) : {};
 
-        state.hostId = this.gameState.hostId || (room && room.game_state ? room.game_state.hostId : this.myId);
+        state.hostId = this.gameState.hostId;
         state.players = Object.assign({}, state.players || {}, this.gameState.players || {});
         state.choices = Object.assign({}, state.choices || {}, this.gameState.choices || {});
+        
         if (this.gameState.currentPrompt) state.currentPrompt = this.gameState.currentPrompt;
         if (this.gameState.rankSet) state.rankSet = this.gameState.rankSet;
-        if (this.gameState.secretNumber) state.secretNumber = this.gameState.secretNumber;
-        if (this.gameState.clueIdx !== undefined) state.clueIdx = this.gameState.clueIdx;
+        if (evaluateStreak) state.streak = this.gameState.streak;
+        else state.streak = state.streak || this.gameState.streak || 0;
 
         const currentGame = this.activeGame || "";
         this.gameState = state;
         this.lastHash = JSON.stringify({ g: currentGame, s: state });
 
-        await sb.from("rooms").update({
-          current_game: currentGame,
-          game_state: state,
-          updated_at: new Date().toISOString()
-        }).eq("id", this.roomCode);
+        await sb.from("rooms").update({ current_game: currentGame, game_state: state }).eq("id", this.roomCode);
       } catch (e) {}
     },
 
@@ -251,9 +197,8 @@
         const p = playersMap[id];
         const pName = typeof p === "object" ? p.name : p;
         const isHost = id === this.gameState.hostId;
-        const isMe = id === this.myId;
-        items.push(`<span class="player-tag" style="background:${isHost ? '#FFF4E5; border:1px solid #FF9800;' : '#EEF2FF; border:1px solid #6366F1;'}">
-          ${isHost ? '👑' : '👤'} ${esc(pName)} ${isMe ? '(You)' : ''} [${isHost ? 'HOST' : 'PLAYER'}]
+        items.push(`<span class="player-tag ${isHost ? 'host-tag' : 'player-tag-standard'}">
+          ${isHost ? '👑' : '👤'} ${esc(pName)}
         </span>`);
       });
       container.innerHTML = items.join(" ");
@@ -263,41 +208,35 @@
       const c = document.getElementById("main-content");
       if (!c) return;
       const isHost = this.isHost();
+      const streak = this.gameState.streak || 0;
 
       c.innerHTML = `
-        <div class="lobby-card">
-          <div class="lobby-header-bar">
+        <div class="card lobby-wrapper">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
             <div>
-              <span class="room-label">ROOM CODE</span>
-              <h2 class="room-code-display">${esc(this.roomCode)}</h2>
+              <div style="font-size:11px; font-weight:800; color:var(--text-muted); letter-spacing:1px;">ROOM CODE</div>
+              <h2 style="color:var(--primary); cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Code copied!');">${esc(this.roomCode)} 📋</h2>
             </div>
-            <button class="btn-primary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Code copied!');">📋 Copy</button>
+            <div class="streak-badge">🔥 ${streak} STREAK</div>
           </div>
-          <div style="margin: 16px 0;">
-            <label style="font-size:11px; font-weight:800; color:#8E8E93;">PLAYERS CONNECTED:</label>
-            <div id="connected-players-list" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
-          </div>
+          
+          <label style="font-size:11px; font-weight:800; color:var(--text-muted);">PLAYERS:</label>
+          <div id="connected-players-list" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
 
           ${isHost ? `
-            <h3 style="margin-top:20px;">Choose a Game (You are Host 👑)</h3>
-            <div class="games-grid-container">
-              <div class="game-card" onclick="App.launchGame('would-rather')"><span>⚖️</span> <h4>Would You Rather</h4></div>
-              <div class="game-card" onclick="App.launchGame('this-or-that')"><span>🔄</span> <h4>This or That</h4></div>
-              <div class="game-card" onclick="App.launchGame('red-green-flag')"><span>🚩</span> <h4>Red/Green Flag</h4></div>
-              <div class="game-card" onclick="App.launchGame('couple-compat')"><span>💖</span> <h4>Compat Quiz</h4></div>
-              <div class="game-card" onclick="App.launchGame('blind-rank')"><span>🙈</span> <h4>Blind Rank</h4></div>
-              <div class="game-card" onclick="App.launchGame('truths-lie')"><span>🤫</span> <h4>2 Truths & 1 Lie</h4></div>
-              <div class="game-card" onclick="App.launchGame('word-letters')"><span>🔤</span> <h4>First/Last Letter</h4></div>
-              <div class="game-card" onclick="App.launchGame('categories-bomb')"><span>💣</span> <h4>Pass The Bomb</h4></div>
-              <div class="game-card" onclick="App.launchGame('guess-age')"><span>📅</span> <h4>Guess The Year</h4></div>
-              <div class="game-card" onclick="App.launchGame('guess-number')"><span>🔢</span> <h4>Guess Number</h4></div>
-              <div class="game-card" onclick="App.launchGame('guess-celeb')"><span>⭐</span> <h4>Guess Celeb</h4></div>
+            <h3 style="margin-top:24px;">Game Modes</h3>
+            <div class="games-grid">
+              <div class="game-mode-card" onclick="App.launchGame('would-rather')"><span>🤔</span><h4>Would You Rather</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('red-green-flag')"><span>🚩</span><h4>Red/Green Flag</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('couple-compat')"><span>❤️</span><h4>Compat Quiz</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('mind-meld')"><span>🧠</span><h4>Mind Meld</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('percentage')"><span>💯</span><h4>1-100 Scale</h4></div>
+              <div class="game-mode-card" style="border-color:var(--primary); background:#EEF2FF;" onclick="App.launchGame('blind-rank')"><span>🔢</span><h4 style="color:var(--primary);">Blind Rank</h4></div>
             </div>
           ` : `
-            <div style="padding:24px; text-align:center; background:#FAF9F7; border:1px solid #E8E6E3; border-radius:12px; margin-top:20px;">
-              <div class="spinner"></div>
-              <h4 style="margin-top:12px;">Waiting for Host to choose a game...</h4>
-              <p style="font-size:13px; color:#666;">Only the Host can start rounds. Get ready!</p>
+            <div style="margin-top:30px; text-align:center; padding:30px 20px; background:#F9FAFB; border-radius:var(--radius-md);">
+              <h3>Waiting for Host...</h3>
+              <p>The host is choosing the next game mode. Get ready to lock in.</p>
             </div>
           `}
         </div>
@@ -305,42 +244,48 @@
       this.updatePlayersUI(this.gameState.players || {});
     },
 
-    async launchGame(gameId) {
-      if (!this.isHost()) {
-        alert("Only the Host can select or advance games.");
-        return;
+    async evaluateStreak() {
+      if (!this.isHost()) return;
+      const choices = this.gameState.choices || {};
+      const keys = Object.keys(choices);
+      if (keys.length === 2 && this.activeGame !== "blind-rank") {
+        const vals = keys.map(k => choices[k]);
+        let isMatch = false;
+        if (this.activeGame === "percentage") isMatch = Math.abs(parseInt(vals[0]) - parseInt(vals[1])) <= 15;
+        else if (this.activeGame === "mind-meld") isMatch = String(vals[0]).toLowerCase() === String(vals[1]).toLowerCase();
+        else isMatch = vals[0] === vals[1];
+
+        if (isMatch) this.gameState.streak = (this.gameState.streak || 0) + 1;
+        else this.gameState.streak = 0;
       }
+    },
+
+    async launchGame(gameId) {
+      if (!this.isHost()) return;
+      await this.evaluateStreak(); 
+
       this.activeGame = gameId;
       this.gameState.choices = {};
-      const banks = window.BANKS || {};
-      const picker = window.Picker || {
-        nextItem: (k, arr) => (arr && arr.length) ? arr[Math.floor(Math.random() * arr.length)] : { a: "A", b: "B" },
-        freshBlindRankSet: () => ["Item 1", "Item 2", "Item 3", "Item 4", "Item 5"]
-      };
+      const b = window.BANKS || {};
+      const p = window.Picker;
 
-      if (gameId === "would-rather") this.gameState.currentPrompt = picker.nextItem("wouldRather", banks.wouldRather);
-      if (gameId === "this-or-that") this.gameState.currentPrompt = picker.nextItem("thisOrThat", banks.thisOrThat);
-      if (gameId === "red-green-flag") this.gameState.currentPrompt = picker.nextItem("redGreenFlag", banks.redGreenFlag);
-      if (gameId === "couple-compat") this.gameState.currentPrompt = picker.nextItem("compatQuiz", banks.compatQuiz);
-      if (gameId === "blind-rank") this.gameState.rankSet = picker.freshBlindRankSet(5);
-      if (gameId === "word-letters") this.gameState.currentPrompt = picker.nextItem("letterPrompts", banks.letterPrompts);
-      if (gameId === "categories-bomb") this.gameState.currentPrompt = picker.nextItem("bombCategories", banks.bombCategories);
-      if (gameId === "guess-age") this.gameState.currentPrompt = picker.nextItem("guessAge", banks.guessAge);
-      if (gameId === "guess-celeb") { this.gameState.currentPrompt = picker.nextItem("guessCeleb", banks.guessCeleb); this.gameState.clueIdx = 0; }
-      if (gameId === "guess-number") this.gameState.secretNumber = picker.freshNumber(1, 100);
+      if (gameId === "would-rather") this.gameState.currentPrompt = p.nextItem("wouldRather", b.wouldRather);
+      if (gameId === "red-green-flag") this.gameState.currentPrompt = p.nextItem("redGreenFlag", b.redGreenFlag);
+      if (gameId === "couple-compat") this.gameState.currentPrompt = p.nextItem("compatQuiz", b.compatQuiz);
+      if (gameId === "mind-meld") this.gameState.currentPrompt = p.nextItem("mindMeld", b.mindMeld);
+      if (gameId === "percentage") this.gameState.currentPrompt = p.nextItem("percentage", b.percentage);
+      if (gameId === "blind-rank") this.gameState.rankSet = p.freshBlindRankSet();
 
-      await this.pushDB();
+      await this.pushDB(true);
       this.renderActiveGame();
     },
 
     async exitGame() {
-      if (!this.isHost()) {
-        alert("Only the Host can return the room to the lobby.");
-        return;
-      }
+      if (!this.isHost()) return;
+      await this.evaluateStreak();
       this.activeGame = null;
       this.gameState.choices = {};
-      await this.pushDB();
+      await this.pushDB(true);
       this.renderLobby();
     },
 
@@ -350,27 +295,72 @@
       this.gameState.choices[this.myId] = val.toString().trim();
       await this.pushDB();
       this.renderActiveGame();
+    },
 
-      if (Object.keys(this.gameState.choices).length >= 2 && window.confetti) {
-        window.confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
-      }
+    async submitBlindRank(slot, item) {
+      this.gameState.choices = this.gameState.choices || {};
+      if (typeof this.gameState.choices[this.myId] !== "object") this.gameState.choices[this.myId] = {};
+      this.gameState.choices[this.myId][slot] = item;
+      
+      const numAnswered = Object.keys(this.gameState.choices[this.myId]).length;
+      if (numAnswered === 5 && window.confetti) window.confetti({ particleCount: 80, spread: 60, origin: { y: 0.8 } });
+      await this.pushDB();
+      this.renderActiveGame();
     },
 
     renderComparison() {
       const choices = this.gameState.choices || {};
       const keys = Object.keys(choices);
-      if (keys.length === 0) return '<div class="comparison-bar" style="text-align:center;font-size:13px;color:#666;">Waiting for answers...</div>';
+      if (keys.length === 0) return '<div class="comparison-bar" style="text-align:center;color:var(--text-muted);margin-top:20px;">Waiting for answers...</div>';
 
-      let html = '<div class="comparison-bar">';
+      if (this.activeGame === "blind-rank") {
+        const p1Done = choices[keys[0]] && Object.keys(choices[keys[0]]).length === 5;
+        const p2Done = keys.length > 1 && choices[keys[1]] && Object.keys(choices[keys[1]]).length === 5;
+        
+        if (!p1Done || (keys.length > 1 && !p2Done)) return '<div class="comparison-bar" style="text-align:center;margin-top:20px;font-weight:700;">Ranking in progress... ⏳</div>';
+
+        let html = '<div class="comparison-bar" style="display:flex; gap:16px; margin-top:20px;">';
+        keys.forEach(k => {
+          const pObj = this.gameState.players && this.gameState.players[k];
+          const name = (k === this.myId) ? "You" : (pObj ? (pObj.name || pObj) : "Partner");
+          html += `<div style="flex:1;"><strong>${esc(name)}</strong>`;
+          for(let i=1; i<=5; i++) {
+            html += `<div style="font-size:13px; font-weight:600; background:#F3F4F6; margin-top:8px; padding:10px; border-radius:8px;">${i}. ${esc(choices[k][i])}</div>`;
+          }
+          html += `</div>`;
+        });
+        html += '</div>';
+        return html;
+      }
+
+      let html = '<div class="comparison-bar" style="margin-top:24px; background:#F9FAFB; padding:20px; border-radius:var(--radius-md);">';
       keys.forEach(k => {
         const pObj = this.gameState.players && this.gameState.players[k];
         const name = (k === this.myId) ? "You" : (pObj ? (pObj.name || pObj) : "Partner");
-        html += `<div class="choice-row"><strong>${esc(name)}:</strong> <span>${esc(choices[k])}</span></div>`;
+        html += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #E5E7EB;">
+                   <strong style="color:var(--text-muted);">${esc(name)}:</strong>
+                   <span style="font-weight:800; text-align:right;">${esc(choices[k])}</span>
+                 </div>`;
       });
+
       if (keys.length >= 2) {
         const vals = keys.map(k => choices[k]);
-        const match = vals.every(v => v === vals[0]);
-        html += `<div style="text-align:center;font-weight:900;margin-top:10px;color:${match ? '#137333' : '#1A1A1A'};">${match ? '🎉 MATCH!' : '⚡ Different choices'}</div>`;
+        let isMatch = false;
+        if (this.activeGame === "percentage") isMatch = Math.abs(parseInt(vals[0]) - parseInt(vals[1])) <= 15;
+        else if (this.activeGame === "mind-meld") isMatch = String(vals[0]).toLowerCase() === String(vals[1]).toLowerCase();
+        else isMatch = vals[0] === vals[1];
+
+        if (isMatch) {
+          if (window.confetti) window.confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+          html += `<div class="match-box">🔥 VIBE MATCH! 🔥</div>`;
+        } else {
+          html += `<div style="text-align:center;font-weight:900;margin-top:16px;color:#D32F2F;font-size:15px;">💀 STREAK BROKEN</div>`;
+          if ((this.gameState.streak || 0) >= 2) {
+            const dares = window.BANKS.dares || ["Take a drink!"];
+            const dareStr = dares[(this.roomCode.charCodeAt(0) + vals[0].length) % dares.length];
+            html += `<div class="penalty-box"><strong style="color:#991B1B;font-size:13px;letter-spacing:1px;">🚨 PENALTY 🚨</strong><br/><span style="color:#DC2626;font-weight:700;">${esc(dareStr)}</span></div>`;
+          }
+        }
       }
       html += '</div>';
       return html;
@@ -383,6 +373,36 @@
         temp.innerHTML = this.renderComparison();
         bar.parentNode.replaceChild(temp.firstElementChild, bar);
       }
+      if (this.activeGame === "blind-rank" && document.getElementById("br-body")) {
+        document.getElementById("br-body").innerHTML = this.getBlindRankBody();
+      }
+    },
+
+    getBlindRankBody() {
+      const rankSet = this.gameState.rankSet || [];
+      const myRanks = (this.gameState.choices && this.gameState.choices[this.myId]) || {};
+      const numAnswered = Object.keys(myRanks).length;
+
+      if (numAnswered < 5) {
+        const currentItem = rankSet[numAnswered];
+        let slotsHtml = "";
+        for(let i=1; i<=5; i++) {
+          if (myRanks[i]) {
+            slotsHtml += `<div style="background:#F3F4F6; padding:12px; margin-bottom:8px; border-radius:var(--radius-sm); color:#9CA3AF; font-size:14px; text-decoration:line-through; font-weight:700;">${i}. ${esc(myRanks[i])}</div>`;
+          } else {
+            slotsHtml += `<button class="btn-secondary" style="margin-bottom:8px; justify-content:flex-start; border-color:var(--primary); color:var(--primary);" onclick="App.submitBlindRank(${i}, '${esc(currentItem)}')">Lock in Slot #${i}</button>`;
+          }
+        }
+        return `
+          <div style="background:linear-gradient(135deg, var(--primary), #818CF8); color:white; padding:24px; border-radius:var(--radius-md); margin-bottom:20px; text-align:center; box-shadow: 0 10px 20px rgba(79,102,241,0.2);">
+            <span style="font-size:11px; font-weight:900; opacity:0.9; letter-spacing:1.5px;">ITEM ${numAnswered + 1} OF 5</span>
+            <h2 style="margin:8px 0 0 0; font-size:28px;">${esc(currentItem)}</h2>
+          </div>
+          ${slotsHtml}
+        `;
+      } else {
+        return `<div style="padding:24px; text-align:center; background:#E0F2FE; color:#0369A1; border-radius:var(--radius-md); margin:16px 0; font-weight:800; font-size:16px;">✅ Your list is locked in!</div>`;
+      }
     },
 
     renderActiveGame() {
@@ -391,136 +411,90 @@
       if (!this.activeGame) { this.renderLobby(); return; }
 
       const isHost = this.isHost();
+      const streak = this.gameState.streak || 0;
       let body = "";
-      const cur = this.gameState.currentPrompt || { a: "Option A", b: "Option B" };
-      const myChoice = this.gameState.choices ? this.gameState.choices[this.myId] : null;
+      const cur = this.gameState.currentPrompt || { a: "A", b: "B" };
+      const myChoice = (this.gameState.choices && this.gameState.choices[this.myId]) ? this.gameState.choices[this.myId] : null;
 
-      switch (this.activeGame) {
-        case "would-rather":
-        case "this-or-that":
-          const title = this.activeGame === "would-rather" ? "Would You Rather..." : "This or That";
-          const div = this.activeGame === "would-rather" ? "OR" : "VS";
-          body = `
-            <h3>${title}</h3>
-            <button class="btn-choice ${myChoice === cur.a ? "selected" : ""}" onclick="App.submitChoice('${esc(cur.a)}')">${esc(cur.a)}</button>
-            <div class="divider">${div}</div>
-            <button class="btn-choice ${myChoice === cur.b ? "selected" : ""}" onclick="App.submitChoice('${esc(cur.b)}')">${esc(cur.b)}</button>
-          `;
-          break;
-        case "red-green-flag":
-          body = `
-            <h3>Red Flag or Green Flag?</h3>
-            <p style="font-weight:700;margin:16px 0;">"${esc(cur)}"</p>
-            <button class="btn-choice ${myChoice === 'Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('Red Flag')">Red Flag</button>
-            <button class="btn-choice ${myChoice === 'Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('Green Flag')">Green Flag</button>
-          `;
-          break;
-        case "couple-compat":
-          body = `
-            <h3>Compatibility Quiz</h3>
-            <p style="font-weight:700;margin:16px 0;">${esc(cur)}</p>
-            <button class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')">Definitely Me</button>
-            <button class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')">Definitely Partner</button>
-          `;
-          break;
-        case "blind-rank":
-          const rankSet = this.gameState.rankSet || [];
-          body = `
-            <h3>Blind Ranking</h3>
-            <p style="font-size:13px;color:#666;margin-bottom:10px;">Select your ranking:</p>
-            ${rankSet.map((item, i) => `
-              <div style="background:#FAF9F7;border:1px solid #E8E6E3;padding:10px;border-radius:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
-                <span>${i+1}. ${esc(item)}</span>
-                <button class="btn-secondary" style="width:auto;min-height:34px;padding:4px 10px;font-size:12px;" onclick="App.submitChoice('Rank #${i+1}: ${esc(item)}')">Rank #${i+1}</button>
+      if (this.activeGame === "blind-rank") {
+        body = `<div id="br-body">${this.getBlindRankBody()}</div>`;
+      } else {
+        switch (this.activeGame) {
+          case "would-rather":
+            body = `
+              <h3 style="margin-bottom:16px; text-align:center;">Would You Rather...</h3>
+              <button class="btn-choice ${myChoice === cur.a ? "selected" : ""}" onclick="App.submitChoice('${esc(cur.a)}')">${esc(cur.a)}</button>
+              <div class="divider">OR</div>
+              <button class="btn-choice ${myChoice === cur.b ? "selected" : ""}" onclick="App.submitChoice('${esc(cur.b)}')">${esc(cur.b)}</button>
+            `;
+            break;
+          case "red-green-flag":
+            body = `
+              <h3 style="text-align:center;">Red or Green Flag?</h3>
+              <div style="background:#F9FAFB; padding:24px; border-radius:var(--radius-md); text-align:center; margin:20px 0; border:2px solid var(--border);">
+                <p style="font-weight:800; font-size:18px; margin:0; color:var(--text-main);">"${esc(cur)}"</p>
               </div>
-            `).join("")}
-          `;
-          break;
-        case "word-letters":
-          body = `
-            <h3>First / Last Letter</h3>
-            <p>Category: <strong>${esc(cur.category)}</strong></p>
-            <p>Must start with letter: <strong>'${esc(cur.letter)}'</strong></p>
-            <input type="text" id="g-input" placeholder="Type word..." class="game-input" />
-            <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('g-input').value)">Submit Word</button>
-          `;
-          break;
-        case "categories-bomb":
-          body = `
-            <h3>Pass The Bomb</h3>
-            <p>Category: <strong>${esc(cur)}</strong></p>
-            <input type="text" id="g-input" placeholder="Type word fast..." class="game-input" />
-            <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('g-input').value)">Pass Answer</button>
-          `;
-          break;
-        case "guess-age":
-          body = `
-            <h3>Guess The Year</h3>
-            <div style="background:#FAF9F7;border:1px solid #E8E6E3;padding:14px;border-radius:12px;font-weight:600;text-align:center;margin:12px 0;">"${esc(cur.subject)}"</div>
-            <input type="number" id="g-input" placeholder="Enter year..." class="game-input" />
-            <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('g-input').value)">Submit Guess</button>
-            <button class="btn-secondary" style="margin-top:8px;" onclick="alert('Answer: ' + App.gameState.currentPrompt.answer)">Reveal Year</button>
-          `;
-          break;
-        case "guess-number":
-          const guess = myChoice ? parseInt(myChoice) : null;
-          const secret = this.gameState.secretNumber || 50;
-          let hint = "";
-          if (guess !== null && !isNaN(guess)) {
-            if (guess === secret) hint = "Correct!";
-            else if (guess < secret) hint = "Higher 📈";
-            else hint = "Lower 📉";
-          }
-          body = `
-            <h3>Guess Secret Number (1-100)</h3>
-            <input type="number" id="g-input" placeholder="1 to 100..." class="game-input" />
-            <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('g-input').value)">Submit Guess</button>
-            ${myChoice ? `<p style="font-weight:700;margin-top:10px;">Your Guess: ${myChoice} — ${hint}</p>` : ""}
-          `;
-          break;
-        case "guess-celeb":
-          const clueIdx = this.gameState.clueIdx || 0;
-          const cluesList = cur.clues || [];
-          const cluesShown = cluesList.slice(0, clueIdx + 1);
-          body = `
-            <h3>Guess The Celebrity</h3>
-            <div style="background:#FAF9F7;border:1px solid #E8E6E3;padding:12px;border-radius:12px;margin:12px 0;">
-              ${cluesShown.map((cl, i) => `<p style="margin-bottom:4px;"><strong>Clue #${i+1}:</strong> ${esc(cl)}</p>`).join("")}
-            </div>
-            ${clueIdx < cluesList.length - 1 ? `<button class="btn-secondary" style="margin-bottom:10px;" onclick="App.gameState.clueIdx++; App.pushDB(); App.renderActiveGame();">Reveal Next Clue</button>` : ""}
-            <input type="text" id="g-input" placeholder="Type name..." class="game-input" />
-            <button class="btn-action" style="margin-top:10px;" onclick="App.submitChoice(document.getElementById('g-input').value)">Submit Guess</button>
-            <button class="btn-secondary" style="margin-top:8px;" onclick="alert('Answer: ' + App.gameState.currentPrompt.answer)">Reveal Answer</button>
-          `;
-          break;
-        default:
-          body = `<p>Game active.</p>`;
+              <div style="display:flex; gap:10px;">
+                <button style="flex:1; border-color:#FECACA; color:#DC2626;" class="btn-choice ${myChoice === '🚩 Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('🚩 Red Flag')">🚩 Red Flag</button>
+                <button style="flex:1; border-color:#A7F3D0; color:#059669;" class="btn-choice ${myChoice === '🌿 Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('🌿 Green Flag')">🌿 Green Flag</button>
+              </div>
+            `;
+            break;
+          case "couple-compat":
+            body = `
+              <h3 style="text-align:center;">Compatibility Quiz</h3>
+              <p style="font-weight:800;margin:24px 0;font-size:20px;text-align:center;line-height:1.3;">${esc(cur)}</p>
+              <div style="display:flex; gap:12px;">
+                <button style="flex:1; padding:24px 10px;" class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')"><span style="font-size:24px;display:block;margin-bottom:8px;">🙋‍♂️</span> Me</button>
+                <button style="flex:1; padding:24px 10px;" class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')"><span style="font-size:24px;display:block;margin-bottom:8px;">🙋‍♀️</span> Partner</button>
+              </div>
+            `;
+            break;
+          case "mind-meld":
+            body = `
+              <h3 style="text-align:center;">Mind Meld 🧠</h3>
+              <div style="background:var(--primary); color:white; padding:24px; border-radius:var(--radius-md); text-align:center; margin:20px 0;">
+                <p style="font-weight:800;font-size:20px;margin:0;color:white;">${esc(cur)}</p>
+              </div>
+              <p style="font-size:13px; color:var(--text-muted); text-align:center; margin-bottom:12px;">Type the first thing that comes to mind. Exact matches win.</p>
+              <div style="display:flex; gap:10px;">
+                <input type="text" id="meld-input" class="game-input" placeholder="Your answer..." style="flex:1; margin:0;">
+                <button class="btn-primary" style="width:auto; padding:0 24px;" onclick="App.submitChoice(document.getElementById('meld-input').value)">Lock In</button>
+              </div>
+            `;
+            break;
+          case "percentage":
+            body = `
+              <h3 style="text-align:center;">The 1-100 Scale</h3>
+              <p style="font-weight:800;margin:24px 0;font-size:18px;text-align:center;">${esc(cur)}</p>
+              <div class="slider-container">
+                <input type="range" id="perc-slider" min="0" max="100" value="50" oninput="document.getElementById('perc-val').innerText = this.value">
+                <div style="text-align:center; font-size:42px; font-weight:900; color:var(--primary); margin:20px 0;" id="perc-val">50</div>
+                <button class="btn-primary" onclick="App.submitChoice(document.getElementById('perc-slider').value)">Submit Rating</button>
+              </div>
+            `;
+            break;
+        }
       }
 
       c.innerHTML = `
-        <div class="active-game-wrapper">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            ${isHost ? `
-              <button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 12px;font-size:13px;" onclick="App.exitGame()">← Lobby</button>
-            ` : `
-              <span style="font-size:12px;color:#8E8E93;font-weight:700;">Host controls the session</span>
-            `}
-            <span style="font-weight:900;font-size:11px;letter-spacing:1px;color:#8E8E93;">ACTIVE GAME</span>
+        <div class="card active-game-wrapper">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+            ${isHost ? `<button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 16px;font-size:13px;border-radius:30px;" onclick="App.exitGame()">← Lobby</button>` : `<span style="font-size:12px;font-weight:700;color:var(--text-muted);">HOST CONTROLS ROUND</span>`}
+            <div class="streak-badge">🔥 ${streak}</div>
           </div>
+          
           ${body}
-          ${this.renderComparison()}${isHost ? `
-            <button class="btn-action" style="margin-top:16px;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
-          ` : `
-            <p style="font-size:12px;color:#888;margin-top:12px;text-align:center;">Waiting for Host to advance to next round...</p>
-          `}
+          ${this.renderComparison()}
+          
+          ${isHost ? `
+            <button class="btn-primary" style="margin-top:24px; background:#111; box-shadow:none;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
+          ` : ``}
         </div>
       `;
     }
   };
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => window.App.init());
-  } else {
-    window.App.init();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => window.App.init());
+  else window.App.init();
 })();
