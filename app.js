@@ -35,7 +35,7 @@
     gameState: { choices: {}, players: {}, hostId: null, streak: 0, currentPrompt: null, secretWord: null, secretSetter: null, rankSet: null },
     pollTimer: null,
     lastHash: "",
-    celebrated: false, // Prevents duplicate confetti pops
+    celebrated: false,
     
     init() {
       getClient();
@@ -44,24 +44,18 @@
 
     isHost() { return this.gameState.hostId === this.myId; },
 
-    // Core verification engine to check if all connected players have submitted data
     checkAllAnswered() {
       const numPlayers = Object.keys(this.gameState.players || {}).length || 2;
       const numChoices = Object.keys(this.gameState.choices || {}).length;
       
-      if (this.activeGame === "secret-guess") {
-        // Mastermind: 1 setter, everyone else guesses. 
-        return numChoices >= (numPlayers - 1);
-      }
+      if (this.activeGame === "secret-guess") return numChoices >= (numPlayers - 1);
       if (this.activeGame === "blind-rank") {
-        // Blind Rank: All players must have exactly 5 slots filled
         const keys = Object.keys(this.gameState.players || {});
         for (let k of keys) {
             if (!this.gameState.choices || !this.gameState.choices[k] || Object.keys(this.gameState.choices[k]).length < 5) return false;
         }
         return true;
       }
-      // Default: 1 choice per player
       return numChoices >= numPlayers;
     },
 
@@ -69,23 +63,22 @@
       const c = document.getElementById("main-content");
       if (!c) return;
       c.innerHTML = `
-        <div class="workspace-shell">
-          <div>
-            <h2>Initialize</h2>
-            <p>Establish a real-time connection sequence.</p>
+        <div class="workspace-shell" style="text-align:center;">
+          <div style="font-size:60px; margin-bottom:10px;">🔥</div>
+          <h2>DuoVibe</h2>
+          <p style="margin-bottom:32px;">Are you on the same wavelength?</p>
+          
+          <div style="text-align:left;">
+            <label style="font-size:13px; font-weight:800; color:rgba(255,255,255,0.6); text-transform:uppercase; margin-left:8px;">Your Handle</label>
+            <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Type your name..." />
           </div>
           
-          <div>
-            <label style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); text-transform:uppercase;">Player Handle</label>
-            <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Enter handle..." />
-          </div>
-          
-          <div style="margin-top:16px;">
-            <button class="btn-primary" onclick="App.createRoom()">Create Session (Host)</button>
-            <div class="divider">Join Session</div>
+          <div style="margin-top:32px;">
+            <button class="btn-primary" onclick="App.createRoom()">Create Session</button>
+            <div class="divider">Join a Friend</div>
             <div style="display:flex; gap:12px;">
-              <input id="input-room-code" placeholder="CODE" class="game-input" style="text-transform:uppercase; text-align:center; margin:0;" maxlength="6" />
-              <button class="btn-secondary" style="width:140px;" onclick="App.joinRoomWithCode()">Connect</button>
+              <input id="input-room-code" placeholder="CODE" class="game-input" style="text-transform:uppercase; text-align:center; margin:0; flex:1;" maxlength="6" />
+              <button class="btn-secondary" style="width:120px; background:rgba(255,255,255,0.15);" onclick="App.joinRoomWithCode()">Join</button>
             </div>
           </div>
         </div>
@@ -150,7 +143,7 @@
           this.gameState = state;
         }
         if (this.pollTimer) clearInterval(this.pollTimer);
-        this.pollTimer = setInterval(() => this.pollDB(), 750);
+        this.pollTimer = setInterval(() => this.pollDB(), 800);
         this.renderLobby();
       } catch (e) {}
     },
@@ -241,7 +234,7 @@
         const pName = typeof p === "object" ? p.name : p;
         const isHost = id === this.gameState.hostId;
         items.push(`<span class="badge ${isHost ? 'badge-host' : 'badge-player'}">
-          ${isHost ? '[HOST]' : '[USER]'} ${esc(pName)}
+          ${isHost ? '⭐' : '👤'} ${esc(pName)}
         </span>`);
       });
       container.innerHTML = items.join("");
@@ -255,35 +248,33 @@
 
       c.innerHTML = `
         <div class="workspace-shell lobby-wrapper">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
             <div>
-              <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); margin-bottom:4px;">SESSION_ID</div>
-              <div class="mono-display" style="cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Code copied!');">${esc(this.roomCode)}</div>
+              <div style="font-size:12px; font-weight:800; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Room Code</div>
+              <div style="font-size:36px; font-weight:900; letter-spacing:4px; color:var(--secondary); cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Copied!');">${esc(this.roomCode)}</div>
             </div>
-            <div class="badge badge-streak">STREAK: ${streak}</div>
+            <div class="badge badge-streak">🔥 ${streak}</div>
           </div>
           
-          <div>
-            <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); margin-bottom:8px;">ACTIVE_NODES</div>
-            <div id="connected-players-list" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+          <div style="background:rgba(0,0,0,0.3); padding:20px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
+            <div style="font-size:12px; font-weight:800; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase;">Connected</div>
+            <div id="connected-players-list" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
           </div>
 
           ${isHost ? `
-            <div style="margin-top:16px;">
-              <h3>Deploy Module</h3>
-              <div class="games-grid">
-                <div class="game-mode-card" onclick="App.launchGame('secret-guess')"><span>[01]</span><h4>Mastermind</h4></div>
-                <div class="game-mode-card" onclick="App.launchGame('would-rather')"><span>[02]</span><h4>Would Rather</h4></div>
-                <div class="game-mode-card" onclick="App.launchGame('couple-compat')"><span>[03]</span><h4>Compat Quiz</h4></div>
-                <div class="game-mode-card" onclick="App.launchGame('mind-meld')"><span>[04]</span><h4>Mind Meld</h4></div>
-                <div class="game-mode-card" onclick="App.launchGame('percentage')"><span>[05]</span><h4>1-100 Scale</h4></div>
-                <div class="game-mode-card" onclick="App.launchGame('blind-rank')"><span>[06]</span><h4>Blind Rank</h4></div>
-              </div>
+            <h3 style="margin-top:32px; font-size:24px; text-align:center;">Select Mode</h3>
+            <div class="games-grid">
+              <div class="game-mode-card" onclick="App.launchGame('secret-guess')"><span>🕵️‍♂️</span><h4>Mastermind</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('would-rather')"><span>🤔</span><h4>Would Rather</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('couple-compat')"><span>❤️</span><h4>Compat Quiz</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('mind-meld')"><span>🧠</span><h4>Mind Meld</h4></div>
+              <div class="game-mode-card" onclick="App.launchGame('percentage')"><span>💯</span><h4>Vibe Slider</h4></div>
+              <div class="game-mode-card" style="border-color:var(--secondary); background:rgba(0,229,255,0.05);" onclick="App.launchGame('blind-rank')"><span>🔢</span><h4 style="color:var(--secondary);">Blind Rank</h4></div>
             </div>
           ` : `
-            <div style="margin-top:24px; padding:32px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); text-align:center;">
-              <h4 style="font-weight:500;">Awaiting Host Instruction...</h4>
-              <p style="font-size:13px; margin-top:8px; color:var(--text-muted);">Stand by for module deployment.</p>
+            <div style="margin-top:30px; text-align:center; padding:40px 20px; background:rgba(255,255,255,0.05); border:2px dashed rgba(255,255,255,0.2); border-radius:24px;">
+              <h4 style="font-size:20px; font-weight:800;">Waiting for Host...</h4>
+              <p style="font-size:15px; margin-top:12px;">They are picking the next game. Sit tight.</p>
             </div>
           `}
         </div>
@@ -296,7 +287,6 @@
       const choices = this.gameState.choices || {};
       const keys = Object.keys(choices);
       
-      // Do not evaluate unless all players have answered
       if (!this.checkAllAnswered()) return;
       
       if (this.activeGame === "secret-guess" && this.gameState.secretWord) {
@@ -309,11 +299,9 @@
         const vals = keys.map(k => choices[k]);
         let isMatch = false;
         
-        // Exact Logic Fixes
-        if (this.activeGame === "couple-compat") isMatch = vals[0] !== vals[1]; // Opposite match
-        else if (this.activeGame === "percentage") isMatch = Math.abs(parseInt(vals[0]) - parseInt(vals[1])) <= 15; // Margin match
-        else if (this.activeGame === "mind-meld") isMatch = String(vals[0]).toLowerCase() === String(vals[1]).toLowerCase(); // Case-insensitive
-        else isMatch = vals[0] === vals[1]; // Exact
+        if (this.activeGame === "percentage") isMatch = Math.abs(parseInt(vals[0]) - parseInt(vals[1])) <= 15;
+        else if (this.activeGame === "mind-meld") isMatch = String(vals[0]).toLowerCase() === String(vals[1]).toLowerCase();
+        else isMatch = vals[0] === vals[1];
 
         if (isMatch) this.gameState.streak = (this.gameState.streak || 0) + 1;
         else this.gameState.streak = 0;
@@ -330,7 +318,7 @@
       this.gameState.secretWord = null;
       this.gameState.secretSetter = null;
       this.gameState.rankSet = null;
-      this.celebrated = false; // Reset confetti
+      this.celebrated = false;
 
       await this.pushDB(true);
       this.renderActiveGame();
@@ -409,28 +397,28 @@
       
       const numAnswered = Object.keys(this.gameState.choices[this.myId]).length;
       if (numAnswered === 5 && window.confetti && !this.celebrated) {
-          window.confetti({ particleCount: 80, spread: 60, origin: { y: 0.8 } });
+          window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.8 } });
       }
       await this.pushDB();
       this.renderActiveGame();
     },
 
     getDraftingBody() {
-      // DRAFT ISOLATION FIX
       if (!this.isHost()) {
          return `
-            <div style="text-align:center; padding:40px 20px; background:var(--surface); border:1px dashed var(--border); border-radius:var(--radius-md);">
-              <h4 style="font-weight:500;">Configuring Round</h4>
-              <p style="font-size:13px; margin-top:8px; color:var(--text-muted);">Host is establishing the query parameters...</p>
+            <div style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.05); border:2px dashed rgba(255,255,255,0.2); border-radius:24px;">
+              <div style="font-size:40px; margin-bottom:16px;">⏳</div>
+              <h3 style="margin-bottom:8px;">Configuring Round</h3>
+              <p>Host is picking the prompt...</p>
             </div>
          `;
       }
 
       const g = this.activeGame;
       let html = `
-        <div style="margin-bottom:24px;">
-          <h2 style="font-size:20px;">Draft Phase</h2>
-          <p>Provide input parameters or generate a random sequence.</p>
+        <div style="text-align:center; margin-bottom:32px;">
+          <h2 style="font-size:28px;">Setup Phase</h2>
+          <p>Write your own prompt or pick randomly!</p>
         </div>
       `;
 
@@ -439,12 +427,12 @@
            <input id="draft-a" class="game-input" placeholder="Option A">
            <div class="divider">VS</div>
            <input id="draft-b" class="game-input" placeholder="Option B">
-           <button class="btn-primary" style="margin-top:24px;" onclick="App.submitCustomPrompt({a: document.getElementById('draft-a').value, b: document.getElementById('draft-b').value})">Compile</button>
+           <button class="btn-primary" style="margin-top:24px;" onclick="App.submitCustomPrompt({a: document.getElementById('draft-a').value, b: document.getElementById('draft-b').value})">Lock In Custom</button>
          `;
       } else if (g === "blind-rank") {
          html += `
-           <textarea id="draft-rank" class="game-input" placeholder="Input 5 items (comma separated)" rows="3" style="resize:none;"></textarea>
-           <button class="btn-primary" style="margin-top:24px;" onclick="App.submitCustomRank(document.getElementById('draft-rank').value)">Compile</button>
+           <textarea id="draft-rank" class="game-input" placeholder="Input 5 items (comma separated)" rows="3" style="resize:none; padding:16px;"></textarea>
+           <button class="btn-primary" style="margin-top:24px;" onclick="App.submitCustomRank(document.getElementById('draft-rank').value)">Lock In Custom</button>
          `;
       } else if (g === "secret-guess") {
          const items = window.Picker.get50Items();
@@ -455,19 +443,19 @@
          gridHtml += `</div>`;
          html = `<h3>Select Target Node</h3><p>Choose 1 of 50 items for the user to identify.</p>${gridHtml}`;
       } else {
-         let ph = "Input query parameter...";
-         if (g === "mind-meld") ph = "Input category...";
-         if (g === "percentage") ph = "Input 1-100 metric question...";
+         let ph = "Type a scenario/question...";
+         if (g === "mind-meld") ph = "Type a category (e.g. A fast food chain)";
+         if (g === "percentage") ph = "Type a 1-100 question (e.g. How annoying is...)";
 
          html += `
            <input id="draft-text" class="game-input" placeholder="${ph}">
-           <button class="btn-primary" style="margin-top:24px;" onclick="App.submitCustomPrompt(document.getElementById('draft-text').value)">Compile</button>
+           <button class="btn-primary" style="margin-top:24px;" onclick="App.submitCustomPrompt(document.getElementById('draft-text').value)">Lock In Custom</button>
          `;
       }
 
       html += `
         <div class="divider">OR</div>
-        <button class="btn-secondary" onclick="App.rollRandomPrompt()">Generate Random Sequence</button>
+        <button class="btn-secondary" onclick="App.rollRandomPrompt()">🎲 Generate Random Prompt</button>
       `;
       return html;
     },
@@ -480,11 +468,13 @@
       if (isSetter) {
         return `
           <h3>Target Locked</h3>
-          <div style="background:var(--surface); border:1px solid var(--border); padding:20px; border-radius:var(--radius-md); margin-bottom:24px;">
-            <span style="font-family:var(--font-mono); font-size:12px; color:var(--danger);">TARGET</span>
-            <div style="font-size:18px; font-weight:600; margin-top:4px;">${esc(secret)}</div>
+          <div style="background:rgba(255, 51, 102, 0.15); border:2px solid #FF3366; padding:24px; border-radius:24px; margin:20px 0; text-align:center; box-shadow:0 0 20px rgba(255,51,102,0.3);">
+            <span style="font-size:12px; font-weight:900; color:#FF3366; letter-spacing:2px; text-transform:uppercase;">SECRET</span>
+            <div style="font-size:28px; font-weight:900; margin-top:8px; color:#FFF;">${esc(secret)}</div>
           </div>
-          <p style="color:var(--text-muted);">Awaiting user identification...</p>
+          <div style="padding:32px; text-align:center; background:rgba(0,0,0,0.2); border:1px dashed rgba(255,255,255,0.2); border-radius:20px;">
+            <p>Waiting for them to guess...</p>
+          </div>
         `;
       } else {
         if (!myChoice) {
@@ -494,7 +484,7 @@
             gridHtml += `<div class="option-chip" onclick="App.submitChoice('${esc(item)}')">${esc(item)}</div>`;
           });
           gridHtml += `</div>`;
-          
+
           return `
             <h3>Identify Target</h3>
             <p>The host has locked a target node. Select the matching string.</p>
@@ -503,9 +493,9 @@
         } else {
           return `
             <h3>Submission Sent</h3>
-            <div style="background:var(--surface); border:1px solid var(--border); padding:20px; border-radius:var(--radius-md);">
-              <span style="font-family:var(--font-mono); font-size:12px; color:var(--primary);">YOUR GUESS</span>
-              <div style="font-size:18px; font-weight:600; margin-top:4px;">${esc(myChoice)}</div>
+            <div style="background:rgba(0, 229, 255, 0.15); border:2px solid #00E5FF; padding:24px; border-radius:24px; margin:20px 0; text-align:center; box-shadow:0 0 20px rgba(0,229,255,0.2);">
+              <span style="font-size:12px; font-weight:900; color:#00E5FF; letter-spacing:2px; text-transform:uppercase;">YOUR GUESS</span>
+              <div style="font-size:28px; font-weight:900; margin-top:8px; color:#FFF;">${esc(myChoice)}</div>
             </div>
           `;
         }
@@ -524,15 +514,18 @@
          
          if (!guess) return ``;
          
-         let html = '<div style="margin-top:24px; padding-top:24px; border-top:1px solid var(--border);">';
-         html += `<div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span style="color:var(--text-muted);">Target:</span><span style="font-weight:600; color:var(--text-main);">${esc(this.gameState.secretWord)}</span></div>`;
-         html += `<div style="display:flex; justify-content:space-between;"><span style="color:var(--text-muted);">Identified:</span><span style="font-weight:600; color:var(--text-main);">${esc(guess)}</span></div>`;
+         let html = '<div style="margin-top:32px; padding-top:24px; border-top:1px solid rgba(255,255,255,0.1);">';
+         html += `<div style="display:flex; justify-content:space-between; margin-bottom:16px; align-items:center;"><span style="color:var(--text-muted); font-size:14px; font-weight:800;">Target:</span><span style="font-weight:900; font-size:20px; color:var(--danger);">${esc(this.gameState.secretWord)}</span></div>`;
+         html += `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--text-muted); font-size:14px; font-weight:800;">Guessed:</span><span style="font-weight:900; font-size:20px; color:#FFF;">${esc(guess)}</span></div>`;
          
          if (String(guess).toLowerCase() === String(this.gameState.secretWord).toLowerCase()) {
-            if (window.confetti && allAnswered && !this.celebrated) { window.confetti(); this.celebrated = true; }
-            html += `<div class="match-box">TARGET ACQUIRED</div>`;
+            if (window.confetti && allAnswered && !this.celebrated) { window.confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } }); this.celebrated = true; }
+            html += `<div class="match-box" style="display:flex; flex-direction:column; gap:6px;">
+                       <span style="font-size:22px;">🔥 VIBE MATCH!</span>
+                       <span style="font-size:14px; font-weight:800; color:rgba(0,0,0,0.6); background:rgba(255,255,255,0.3); padding:4px 12px; border-radius:12px; align-self:center;">TARGET ACQUIRED!</span>
+                     </div>`;
          } else {
-            html += `<div class="penalty-box"><strong style="color:var(--danger);">MISMATCH</strong></div>`;
+            html += `<div class="penalty-box"><strong style="font-size:24px;">❌ FAILED</strong></div>`;
          }
          html += '</div>';
          return html;
@@ -541,15 +534,15 @@
       if (keys.length === 0) return '';
 
       if (this.activeGame === "blind-rank") {
-        if (!allAnswered) return `<div style="margin-top:24px; color:var(--text-muted); font-size:13px; font-family:var(--font-mono); text-align:center;">AWAITING COMPILATION...</div>`;
+        if (!allAnswered) return `<div style="margin-top:32px; color:var(--secondary); font-size:15px; font-weight:900; text-align:center; text-transform:uppercase; letter-spacing:1px; animation: pulse 1.5s infinite;">Waiting for Partner...</div>`;
 
-        let html = '<div style="display:flex; gap:20px; margin-top:24px; padding-top:24px; border-top:1px solid var(--border);">';
+        let html = '<div style="display:flex; gap:16px; margin-top:32px; padding-top:24px; border-top:1px solid rgba(255,255,255,0.1);">';
         keys.forEach(k => {
           const pObj = this.gameState.players && this.gameState.players[k];
           const name = (k === this.myId) ? "You" : (pObj ? (pObj.name || pObj) : "Partner");
-          html += `<div style="flex:1;"><strong style="font-size:13px; color:var(--text-muted); text-transform:uppercase;">${esc(name)}</strong>`;
+          html += `<div style="flex:1;"><strong style="font-size:14px; color:var(--secondary); text-transform:uppercase; display:block; text-align:center; margin-bottom:12px;">${esc(name)}</strong>`;
           for(let i=1; i<=5; i++) {
-            html += `<div style="font-size:13px; background:var(--surface); border:1px solid var(--border); margin-top:8px; padding:10px; border-radius:4px;">${i}. ${esc(choices[k][i])}</div>`;
+            html += `<div style="font-size:14px; font-weight:800; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); margin-top:8px; padding:12px; border-radius:12px;">${i}. ${esc(choices[k][i])}</div>`;
           }
           html += `</div>`;
         });
@@ -557,20 +550,19 @@
         return html;
       }
 
-      let html = '<div style="margin-top:24px; padding-top:24px; border-top:1px solid var(--border);">';
+      let html = '<div style="margin-top:32px; padding:32px 24px; background:rgba(0,0,0,0.2); border-radius:24px; border:1px solid rgba(255,255,255,0.05);">';
       keys.forEach(k => {
         const pObj = this.gameState.players && this.gameState.players[k];
         const name = (k === this.myId) ? "You" : (pObj ? (pObj.name || pObj) : "Partner");
         
-        // ANTI-CHEAT MASKING FIX
         let displayChoice = esc(choices[k]);
         if (!allAnswered && k !== this.myId) {
-           displayChoice = `<span style="color:var(--primary); font-family:var(--font-mono); font-size:12px;">[ HIDDEN ]</span>`;
+           displayChoice = `<span style="color:var(--secondary); font-weight:900; font-size:14px; letter-spacing:2px;">[ HIDDEN ]</span>`;
         }
 
-        html += `<div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                   <span style="color:var(--text-muted);">${esc(name)}</span>
-                   <span style="font-weight:600;">${displayChoice}</span>
+        html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                   <span style="color:var(--text-muted); font-weight:800; font-size:16px;">${esc(name)}:</span>
+                   <span style="font-weight:900; font-size:18px;">${displayChoice}</span>
                  </div>`;
       });
 
@@ -578,24 +570,35 @@
         const vals = keys.map(k => choices[k]);
         let isMatch = false;
         
-        // LOGIC FIXES IMPLEMENTED HERE
-        if (this.activeGame === "couple-compat") isMatch = vals[0] !== vals[1]; // Opposite match
-        else if (this.activeGame === "percentage") isMatch = Math.abs(parseInt(vals[0]) - parseInt(vals[1])) <= 15; // 15 pt margin
-        else if (this.activeGame === "mind-meld") isMatch = String(vals[0]).toLowerCase() === String(vals[1]).toLowerCase(); // Case-insensitive
-        else isMatch = vals[0] === vals[1]; // Exact Match
+        if (this.activeGame === "percentage") isMatch = Math.abs(parseInt(vals[0]) - parseInt(vals[1])) <= 15;
+        else if (this.activeGame === "mind-meld") isMatch = String(vals[0]).toLowerCase() === String(vals[1]).toLowerCase();
+        else isMatch = vals[0] === vals[1];
 
         if (isMatch) {
-          if (window.confetti && !this.celebrated) { window.confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } }); this.celebrated = true; }
-          html += `<div class="match-box">SYNC ACHIEVED</div>`;
+          if (window.confetti && !this.celebrated) { window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } }); this.celebrated = true; }
+          
+          let matchReason = "EXACT MATCH!";
+          if (this.activeGame === "couple-compat") matchReason = `BOTH AGREED ON ${esc(vals[0]).toUpperCase()}!`;
+          else if (this.activeGame === "percentage") matchReason = `WITHIN 15 POINTS!`;
+          else if (this.activeGame === "mind-meld") matchReason = `EXACT MIND MELD!`;
+          else if (this.activeGame === "would-rather") matchReason = `SAME CHOICE!`;
+
+          html += `<div class="match-box" style="display:flex; flex-direction:column; gap:6px;">
+                     <span style="font-size:22px;">🔥 VIBE MATCH!</span>
+                     <span style="font-size:14px; font-weight:800; color:rgba(0,0,0,0.6); background:rgba(255,255,255,0.3); padding:4px 12px; border-radius:12px; align-self:center;">${matchReason}</span>
+                   </div>`;
         } else {
-          html += `<div style="text-align:center;font-weight:600;margin-top:20px;color:var(--danger);font-size:14px;letter-spacing:1px;">STREAK TERMINATED</div>`;
+          html += `<div style="text-align:center;font-weight:900;margin-top:24px;color:var(--danger);font-size:20px;text-transform:uppercase;letter-spacing:1px;">❌ Streak Broken</div>`;
           if ((this.gameState.streak || 0) >= 2) {
             const dares = window.BANKS.dares || ["Take a drink!"];
             const dareStr = dares[(this.roomCode.charCodeAt(0) + vals[0].length) % dares.length];
-            html += `<div class="penalty-box"><span style="font-family:var(--font-mono); font-size:11px; color:var(--danger);">PENALTY PROTOCOL</span><br/><span style="font-weight:500; font-size:14px; margin-top:8px; display:block; color:var(--text-main);">${esc(dareStr)}</span></div>`;
+            html += `<div class="penalty-box"><strong style="font-size:18px; letter-spacing:1.5px; text-transform:uppercase;">🚨 Penalty 🚨</strong><br/><span style="font-weight:800; font-size:18px; margin-top:12px; display:block; line-height:1.4;">${esc(dareStr)}</span></div>`;
           }
         }
+      } else if (!allAnswered) {
+         html += `<div style="text-align:center; font-weight:800; color:var(--secondary); font-size:15px; margin-top:24px; text-transform:uppercase; letter-spacing:1px; animation: pulse 1.5s infinite;">Waiting for partner...</div>`;
       }
+      
       html += '</div>';
       return html;
     },
@@ -625,20 +628,20 @@
         let slotsHtml = "";
         for(let i=1; i<=5; i++) {
           if (myRanks[i]) {
-            slotsHtml += `<div style="background:var(--surface); padding:14px; margin-bottom:8px; border-radius:var(--radius-sm); color:var(--text-muted); font-size:14px; text-decoration:line-through; border:1px solid var(--border);">${i}. ${esc(myRanks[i])}</div>`;
+            slotsHtml += `<div style="background:rgba(255,255,255,0.05); padding:16px; margin-bottom:12px; border-radius:16px; color:rgba(255,255,255,0.4); font-size:16px; text-decoration:line-through; font-weight:800; border:2px solid rgba(255,255,255,0.1);">${i}. ${esc(myRanks[i])}</div>`;
           } else {
-            slotsHtml += `<button class="btn-secondary" style="margin-bottom:8px; justify-content:flex-start;" onclick="App.submitBlindRank(${i}, '${esc(currentItem)}')">Lock into Slot [${i}]</button>`;
+            slotsHtml += `<button class="btn-secondary" style="margin-bottom:12px; justify-content:flex-start; font-size:16px; padding:18px 20px; border-color:var(--secondary); color:var(--secondary);" onclick="App.submitBlindRank(${i}, '${esc(currentItem)}')">Lock into Slot [ ${i} ]</button>`;
           }
         }
         return `
-          <div style="background:var(--surface); padding:24px; border-radius:var(--radius-md); margin-bottom:24px; border:1px solid var(--border);">
-            <span style="font-family:var(--font-mono); font-size:11px; color:var(--primary); letter-spacing:1px;">ITEM ${numAnswered + 1} / 5</span>
-            <h2 style="margin:8px 0 0 0; font-size:24px;">${esc(currentItem)}</h2>
+          <div style="background:linear-gradient(135deg, var(--primary), #FF8000); color:white; padding:32px 20px; border-radius:24px; margin-bottom:30px; text-align:center; box-shadow: 0 10px 20px rgba(255,46,147,0.3);">
+            <span style="font-size:12px; font-weight:900; opacity:0.9; letter-spacing:2px; text-transform:uppercase;">ITEM ${numAnswered + 1} OF 5</span>
+            <h2 style="margin:12px 0 0 0; font-size:32px;">${esc(currentItem)}</h2>
           </div>
           ${slotsHtml}
         `;
       } else {
-        return `<div style="padding:24px; text-align:center; background:rgba(16,185,129,0.1); color:var(--accent); border:1px solid rgba(16,185,129,0.2); border-radius:var(--radius-md); margin:16px 0; font-weight:600;">Sequence Locked</div>`;
+        return `<div style="padding:32px; text-align:center; background:rgba(0,255,136,0.15); color:var(--success); border:2px solid rgba(0,255,136,0.3); border-radius:24px; margin:24px 0; font-weight:900; font-size:22px;">✅ List Locked!</div>`;
       }
     },
 
@@ -666,7 +669,7 @@
            switch (this.activeGame) {
              case "would-rather":
                body = `
-                 <h3 style="margin-bottom:16px;">Decision Matrix</h3>
+                 <h3 style="margin-bottom:20px; text-align:center; font-size:24px;">Would You Rather...</h3>
                  <button class="btn-choice ${myChoice === cur.a ? "selected" : ""}" onclick="App.submitChoice('${esc(cur.a)}')">${esc(cur.a)}</button>
                  <div class="divider">OR</div>
                  <button class="btn-choice ${myChoice === cur.b ? "selected" : ""}" onclick="App.submitChoice('${esc(cur.b)}')">${esc(cur.b)}</button>
@@ -674,46 +677,61 @@
                break;
              case "red-green-flag":
                body = `
-                 <h3>Flag Analysis</h3>
-                 <div style="background:var(--surface); padding:24px; border-radius:var(--radius-md); margin:16px 0; border:1px solid var(--border);">
-                   <p style="font-weight:500; font-size:16px; margin:0; color:var(--text-main);">"${esc(cur)}"</p>
+                 <h3 style="text-align:center; font-size:24px;">Red or Green Flag?</h3>
+                 <div style="background:rgba(0,0,0,0.3); padding:32px 24px; border-radius:24px; text-align:center; margin:24px 0; border:2px solid rgba(255,255,255,0.1); box-shadow:inset 0 4px 15px rgba(0,0,0,0.5);">
+                   <p style="font-weight:900; font-size:22px; margin:0; color:#FFF; line-height:1.4;">"${esc(cur)}"</p>
                  </div>
-                 <div style="display:flex; gap:12px;">
-                   <button style="flex:1; border-color:rgba(225,29,72,0.5); color:var(--danger);" class="btn-choice ${myChoice === 'Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('Red Flag')">RED</button>
-                   <button style="flex:1; border-color:rgba(16,185,129,0.5); color:var(--accent);" class="btn-choice ${myChoice === 'Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('Green Flag')">GREEN</button>
+                 <div style="display:flex; gap:16px;">
+                   <button style="flex:1; border-color:rgba(255,51,102,0.4); color:var(--danger);" class="btn-choice ${myChoice === 'Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('Red Flag')">🚩 Red</button>
+                   <button style="flex:1; border-color:rgba(0,255,136,0.4); color:var(--success);" class="btn-choice ${myChoice === 'Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('Green Flag')">🌿 Green</button>
                  </div>
                `;
                break;
              case "couple-compat":
+               const pKeys = Object.keys(this.gameState.players || {});
+               const name1 = pKeys.length > 0 ? this.gameState.players[pKeys[0]].name : "Player 1";
+               const name2 = pKeys.length > 1 ? this.gameState.players[pKeys[1]].name : "Waiting...";
                body = `
-                 <h3>Compatibility Diagnostic</h3>
-                 <p style="font-weight:500;margin:20px 0;font-size:18px;line-height:1.4;color:var(--text-main);">${esc(cur)}</p>
-                 <div style="display:flex; gap:12px;">
-                   <button style="flex:1; padding:20px 10px;" class="btn-choice ${myChoice === 'ME' ? 'selected' : ''}" onclick="App.submitChoice('ME')">ME</button>
-                   <button style="flex:1; padding:20px 10px;" class="btn-choice ${myChoice === 'PARTNER' ? 'selected' : ''}" onclick="App.submitChoice('PARTNER')">PARTNER</button>
+                 <h3 style="text-align:center; font-size:24px;">Who is more likely?</h3>
+                 <p style="font-weight:900;margin:16px 0 8px 0;font-size:24px;text-align:center;line-height:1.4;">${esc(cur)}</p>
+                 <div style="background:rgba(0, 229, 255, 0.15); border:1px solid rgba(0, 229, 255, 0.3); border-radius:16px; padding:16px; margin-bottom:24px; text-align:center;">
+                    <p style="font-weight:900; color:var(--secondary); font-size:14px; text-transform:uppercase; letter-spacing:1px; margin:0;">Win Condition: Consensus</p>
+                    <p style="font-weight:700; color:rgba(255,255,255,0.7); font-size:13px; margin-top:6px;">You only get a point if you both vote for the same person!</p>
+                 </div>
+                 <div style="display:flex; gap:16px;">
+                   <button style="flex:1; padding:32px 10px; font-size:18px; text-transform:uppercase;" class="btn-choice ${myChoice === name1 ? 'selected' : ''}" onclick="App.submitChoice('${esc(name1)}')">${esc(name1)}</button>
+                   <button style="flex:1; padding:32px 10px; font-size:18px; text-transform:uppercase;" class="btn-choice ${myChoice === name2 ? 'selected' : ''}" onclick="App.submitChoice('${esc(name2)}')">${esc(name2)}</button>
                  </div>
                `;
                break;
              case "mind-meld":
                body = `
-                 <h3>Mind Meld</h3>
-                 <div style="background:var(--surface); padding:20px; border-radius:var(--radius-md); margin:16px 0; border:1px solid var(--border);">
-                   <p style="font-weight:600;font-size:16px;margin:0;">${esc(cur)}</p>
+                 <h3 style="text-align:center; font-size:24px;">Mind Meld 🧠</h3>
+                 <div style="background:var(--primary); color:white; padding:32px 24px; border-radius:24px; text-align:center; margin:24px 0; box-shadow:0 10px 30px rgba(255,46,147,0.3);">
+                   <p style="font-weight:900;font-size:24px;margin:0;">${esc(cur)}</p>
                  </div>
-                 <div style="display:flex; gap:12px;">
-                   <input type="text" id="meld-input" class="game-input" placeholder="Enter string..." style="flex:1; margin:0;">
-                   <button class="btn-primary" style="width:auto; padding:0 24px;" onclick="App.submitChoice(document.getElementById('meld-input').value)">Lock</button>
+                 <div style="background:rgba(0, 229, 255, 0.15); border:1px solid rgba(0, 229, 255, 0.3); border-radius:16px; padding:16px; margin-bottom:24px; text-align:center;">
+                    <p style="font-weight:900; color:var(--secondary); font-size:14px; text-transform:uppercase; letter-spacing:1px; margin:0;">Win Condition: Exact Match</p>
+                    <p style="font-weight:700; color:rgba(255,255,255,0.7); font-size:13px; margin-top:6px;">Type the exact same word/phrase to win.</p>
+                 </div>
+                 <div style="display:flex; flex-direction:column; gap:16px;">
+                   <input type="text" id="meld-input" class="game-input" placeholder="Type your answer here..." style="text-align:center; font-size:20px; padding:20px;">
+                   <button class="btn-primary" onclick="App.submitChoice(document.getElementById('meld-input').value)">Lock Answer</button>
                  </div>
                `;
                break;
              case "percentage":
                body = `
-                 <h3>Metric Scale</h3>
-                 <p style="font-weight:500;margin:20px 0;font-size:16px;">${esc(cur)}</p>
+                 <h3 style="text-align:center; font-size:24px;">The Vibe Slider</h3>
+                 <p style="font-weight:900;margin:16px 0 8px 0;font-size:22px;text-align:center;line-height:1.4;">${esc(cur)}</p>
+                 <div style="background:rgba(0, 229, 255, 0.15); border:1px solid rgba(0, 229, 255, 0.3); border-radius:16px; padding:16px; margin-bottom:16px; text-align:center;">
+                    <p style="font-weight:900; color:var(--secondary); font-size:14px; text-transform:uppercase; letter-spacing:1px; margin:0;">Win Condition: Margin of Error</p>
+                    <p style="font-weight:700; color:rgba(255,255,255,0.7); font-size:13px; margin-top:6px;">Match your partner within 15 points to win!</p>
+                 </div>
                  <div class="slider-container">
-                   <input type="range" id="perc-slider" min="0" max="100" value="50" oninput="document.getElementById('perc-val').innerText = this.value">
-                   <div style="text-align:center; font-size:42px; font-weight:700; color:var(--text-main); margin:24px 0;" id="perc-val">50</div>
-                   <button class="btn-primary" onclick="App.submitChoice(document.getElementById('perc-slider').value)">Submit Value</button>
+                   <input type="range" id="perc-slider" min="0" max="100" value="50" oninput="document.getElementById('perc-val').innerText = this.value + '%'">
+                   <div style="text-align:center; font-size:64px; font-weight:900; color:var(--secondary); margin:32px 0; text-shadow: 0 0 30px rgba(0,229,255,0.4);" id="perc-val">50%</div>
+                   <button class="btn-primary" onclick="App.submitChoice(document.getElementById('perc-slider').value)">Lock Rating</button>
                  </div>
                `;
                break;
@@ -724,8 +742,8 @@
       c.innerHTML = `
         <div class="workspace-shell active-game-wrapper">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
-            ${isHost ? `<button class="btn-secondary" style="width:auto;min-height:36px;padding:6px 16px;font-size:13px;" onclick="App.exitGame()">Exit Module</button>` : `<span class="badge badge-player">AWAITING HOST</span>`}
-            <span class="badge badge-streak">STREAK: ${streak}</span>
+            ${isHost ? `<button class="btn-secondary" style="width:auto;padding:10px 20px;font-size:13px;border-radius:20px;" onclick="App.exitGame()">Exit Module</button>` : `<span class="badge badge-player">AWAITING HOST</span>`}
+            <span class="badge badge-streak">🔥 ${streak}</span>
           </div>
           
           ${body}
@@ -734,12 +752,16 @@
           </div>
           
           ${isHost && this.gameState.currentPrompt && allAnswered ? `
-            <button class="btn-primary" style="margin-top:32px;" onclick="App.launchGame('${this.activeGame}')">Proceed Next</button>
+            <button class="btn-primary" style="margin-top:36px; background:#FFF; color:#000; box-shadow:0 6px 0 #CCC;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
           ` : ``}
         </div>
       `;
     }
   };
+
+  const style = document.createElement('style');
+  style.innerHTML = `@keyframes pulse { 0% {opacity:0.4;} 50% {opacity:1;} 100% {opacity:0.4;} }`;
+  document.head.appendChild(style);
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => window.App.init());
   else window.App.init();
