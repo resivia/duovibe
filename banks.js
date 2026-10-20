@@ -1,45 +1,155 @@
-window.BANKS = {
+/* ==========================================================================
+   DUOVIBE V6.1 - ULTIMATE GAME BANKS & SHUFFLE ENGINE
+   ========================================================================== */
+
+window.GAME_BANKS = {
   wouldRather: [
-    {a: "Find true love today", b: "Win $10 million next year"}, {a: "Know HOW you die", b: "Know WHEN you die"}, {a: "Read your partner's mind", b: "See your partner's location 24/7"}, {a: "Always speak your every thought", b: "Never speak again"}, {a: "Give up kissing forever", b: "Give up cuddling forever"}, {a: "Have a terrible honeymoon but a great marriage", b: "Have a perfect honeymoon but a boring marriage"}, {a: "Be 20% more attractive", b: "Be 50% smarter"}, {a: "Fight 1 horse-sized duck", b: "Fight 100 duck-sized horses"}, {a: "Only use TikTok forever", b: "Only use YouTube forever"}, {a: "Never eat cheese again", b: "Never eat chocolate again"}, {a: "Relive the same day for a year", b: "Lose 5 years of your life"}, {a: "Have unlimited free flights", b: "Have unlimited free hotel stays"}, {a: "Be famous for something stupid", b: "Be unknown but a secret genius"}, {a: "Only shower in freezing water", b: "Only wear slightly damp clothes"}, {a: "Never use a smartphone again", b: "Never watch a screen again"}, {a: "Have an arranged marriage", b: "Stay single forever"}, {a: "Forget who you are entirely", b: "Everyone forgets who you are"}, {a: "Always be 10 minutes late", b: "Always be 20 minutes early"}, {a: "Sweat mayonnaise", b: "Cry hot sauce"}, {a: "Talk to animals", b: "Speak every human language"}, {a: "Lose all your money", b: "Lose all your memories"}, {a: "Live in a haunted mansion", b: "Live in a cramped studio apartment"}, {a: "Have a pause button for your life", b: "Have a rewind button"}, {a: "Never have to sleep", b: "Never have to eat"}, {a: "Date someone overly clingy", b: "Date someone overly distant"}, {a: "Share a toothbrush with your partner", b: "Share underwear with your partner"}, {a: "Have hiccups for the rest of your life", b: "Feel like you need to sneeze forever"}, {a: "Be stranded on a desert island alone", b: "Be stranded with someone you hate"}, {a: "Always wear winter clothes in summer", b: "Always wear summer clothes in winter"}, {a: "Have fingers as long as your legs", b: "Have legs as short as your fingers"}
+    { question: "Would you rather...", optionA: "Always have to video call with 5-second lag", optionB: "Only be able to send 3 voice notes per day" },
+    { question: "Would you rather...", optionA: "Surprise visit unannounced", optionB: "Have a perfectly planned 2-week vacation together" },
+    { question: "Would you rather...", optionA: "Never be able to text (video calls only)", optionB: "Never be able to video call (texts & voice notes only)" },
+    { question: "Would you rather...", optionA: "Live in a bustling city together", optionB: "Live in a peaceful beach house together" },
+    { question: "Would you rather...", optionA: "Always cook dinner together on FaceTime", optionB: "Watch movies simultaneously every night" },
+    { question: "Would you rather...", optionA: "Have unlimited flight tickets but 4-hour layovers", optionB: "Direct flights but can only travel twice a year" },
+    { question: "Would you rather...", optionA: "Control the TV remote forever", optionB: "Pick where you eat dinner forever" },
+    { question: "Would you rather...", optionA: "Accidentally send an embarrassing voice note to a group chat", optionB: "Accidentally video call your boss at 2 AM" },
+    { question: "Would you rather...", optionA: "Have your partner steal your hoodie", optionB: "Have your partner steal your favorite snacks" },
+    { question: "Would you rather...", optionA: "Spend a week in rainy Paris together", optionB: "Spend a week on a sunny beach in Bali together" },
+    { question: "Would you rather...", optionA: "Always be 15 minutes early to dates", optionB: "Always be 10 minutes late" },
+    { question: "Would you rather...", optionA: "Only eat breakfast food together forever", optionB: "Only eat late-night snacks together forever" },
+    { question: "Would you rather...", optionA: "Have matching pajamas", optionB: "Have matching wallpapers" },
+    { question: "Would you rather...", optionA: "Be able to read each other's minds", optionB: "Be able to teleport to each other once a month" },
+    { question: "Would you rather...", optionA: "Adopt 3 dogs together", optionB: "Adopt 2 cute cats together" }
   ],
+
   redGreenFlag: [
-    "They are still best friends with their ex.", "They refuse to post you on social media.", "They track your location.", "They want to combine bank accounts immediately.", "They talk to their mom on the phone every single day.", "They hate all your favorite movies.", "They insist on paying for every date.", "They go through your phone while you sleep.", "They have a private Instagram account with 0 posts.", "They bring up their zodiac sign in every argument.", "They tip less than 10% at restaurants.", "They don't own any books.", "They text you good morning every single day.", "They refuse to apologize first.", "They are rude to waiters.", "They always want to stay in on weekends.", "They keep a perfectly clean car.", "They never ask you questions about your day.", "They remember your exact coffee order.", "They follow 1,000+ Instagram models.", "They cancel plans at the last minute.", "They are close with their siblings.", "They don't like animals.", "They reply to texts instantly.", "They ghosted their last serious relationship.", "They volunteer on weekends.", "They make fun of your hobbies.", "They never use a blinker when driving.", "They cook you dinner without you asking.", "They hide their screen when texting."
+    { scenario: "Leaving voice messages over 3 minutes long without asking" },
+    { scenario: "Falling asleep on FaceTime with the camera still running" },
+    { scenario: "Sending 'K' when you're annoyed" },
+    { scenario: "Ordering food for your partner without asking them first" },
+    { scenario: "Checking each other's location on Find My / Google Maps" },
+    { scenario: "Using your partner's netflix profile and ruining their recommendations" },
+    { scenario: "Spoiling the ending of a TV show you were supposed to watch together" },
+    { scenario: "Posting photos of your partner when they haven't approved them" },
+    { scenario: "Taking 4 hours to reply to a text while active on Instagram" },
+    { scenario: "Buying couple hoodies without telling them" },
+    { scenario: "Listening to sad songs when you miss them" },
+    { scenario: "Planning every single minute of a trip together" },
+    { scenario: "Double texting 10 times in a row when they don't reply" }
   ],
+
   compatQuiz: [
-    "Who is more likely to survive a horror movie?", "Who is the worse driver?", "Who spends more money on useless things?", "Who is more likely to start a fight in public?", "Who has the weirder search history?", "Who takes longer to get ready?", "Who is more likely to end up in jail for a day?", "Who says 'I am sorry' first after a fight?", "Who is the bigger flirt?", "Who would win in a physical fight?", "Who is more likely to drop their phone in the toilet?", "Who is the better cook?", "Who complains more when they are sick?", "Who is more likely to forget an anniversary?", "Who has better taste in music?", "Who is more likely to fall asleep during a movie?", "Who is the bigger perfectionist?", "Who is more likely to cry during a sad commercial?", "Who holds a grudge longer?", "Who is more likely to max out a credit card?", "Who gives better advice?", "Who is more likely to get lost using GPS?", "Who is more stubborn?", "Who takes the better photos?", "Who is more likely to adopt a stray animal?", "Who would survive longer on a deserted island?", "Who has the better fashion sense?", "Who is more likely to start a rumor?", "Who is more likely to talk their way out of a speeding ticket?", "Who is the bigger romantic?"
+    { question: "Who is more likely to fall asleep first during a movie night?", options: ["Me", "Partner", "Both", "Neither"] },
+    { question: "Who takes longer to get ready before going out?", options: ["Me", "Partner", "Both", "Neither"] },
+    { question: "Who spends more money on random online shopping?", options: ["Me", "Partner", "Both", "Neither"] },
+    { question: "Who is the dramatic one when getting sick?", options: ["Me", "Partner", "Both", "Neither"] },
+    { question: "Who sends more emojis in daily texts?", options: ["Me", "Partner", "Both", "Neither"] },
+    { question: "Who initiates video calls most often?", options: ["Me", "Partner", "Both", "Neither"] },
+    { question: "Who gets hangry faster when dinner is delayed?", options: ["Me", "Partner", "Both", "Neither"] },
+    { question: "Who is better at remembering anniversary dates and details?", options: ["Me", "Partner", "Both", "Neither"] },
+    { question: "Who is more competitive during board games?", options: ["Me", "Partner", "Both", "Neither"] },
+    { question: "Who is more likely to propose a spontaneous midnight trip?", options: ["Me", "Partner", "Both", "Neither"] }
   ],
-  blindRank: [
-    ["McDonald's", "Wendy's", "Taco Bell", "Burger King", "KFC"], ["Netflix", "TikTok", "Instagram", "YouTube", "Twitter"], ["Dogs", "Cats", "Birds", "Reptiles", "Fish"], ["Pop", "Rock", "Hip Hop", "Classical", "Country"], ["Pizza", "Burgers", "Tacos", "Sushi", "Pasta"], ["Money", "Fame", "Power", "Respect", "Love"], ["Iron Man", "Batman", "Spider-Man", "Superman", "Wolverine"], ["Apple", "Samsung", "Google", "Sony", "Microsoft"], ["Coffee", "Tea", "Soda", "Juice", "Water"], ["Winter", "Spring", "Summer", "Fall", "Monsoon"], ["Vampires", "Zombies", "Werewolves", "Ghosts", "Aliens"], ["Harry Potter", "Star Wars", "Marvel", "Lord of the Rings", "DC"], ["Math", "History", "Science", "English", "Art"], ["Shower", "Bath", "Hot Tub", "Sauna", "Swimming Pool"], ["Nike", "Adidas", "Puma", "Reebok", "Under Armour"], ["Comedy", "Horror", "Action", "Romance", "Sci-Fi"], ["Drake", "Taylor Swift", "The Weeknd", "Beyonce", "Eminem"], ["Sleeping In", "Taking a Nap", "Going to Bed Early", "All Nighter", "Waking up at 5AM"], ["Facebook", "Snapchat", "Reddit", "Pinterest", "LinkedIn"], ["Biking", "Running", "Swimming", "Weightlifting", "Yoga"], ["Beach Vacation", "Mountain Cabin", "City Tour", "Cruise", "Road Trip"], ["French Fries", "Onion Rings", "Mozzarella Sticks", "Chicken Nuggets", "Nachos"], ["Coke", "Pepsi", "Dr Pepper", "Sprite", "Mountain Dew"], ["Pancakes", "Waffles", "French Toast", "Crepes", "Oatmeal"], ["Introvert", "Extrovert", "Ambivert", "Loner", "Social Butterfly"], ["Jeans", "Sweatpants", "Shorts", "Leggings", "Slacks"], ["Texting", "Calling", "FaceTime", "Voice Notes", "In Person"], ["Vanilla", "Chocolate", "Strawberry", "Mint", "Cookie Dough"], ["Airplanes", "Trains", "Cars", "Boats", "Bicycles"], ["Morning", "Afternoon", "Evening", "Night", "Midnight"]
-  ],
+
   mindMeld: [
-    "Name a brand of toothpaste.", "Name a fictional wizard.", "Name a color of the rainbow.", "Name a superhero.", "Name a popular shoe brand.", "Name a body part starting with 'T'.", "Name a fast food chain.", "Name a common phobia.", "Name a streaming service.", "Name a breed of dog.", "Name a state in the US.", "Name a fruit that is red.", "Name a piece of furniture.", "Name a popular sport.", "Name a day of the week.", "Name a planet in our solar system.", "Name a popular board game.", "Name a hot beverage.", "Name a farm animal.", "Name a kitchen appliance.", "Name a type of flower.", "Name a famous rapper.", "Name a superhero sidekick.", "Name a pizza topping.", "Name a popular car brand.", "Name a shape.", "Name a popular chocolate bar.", "Name a mode of transportation.", "Name a continent.", "Name an instrument in an orchestra."
+    { topic: "Name a movie you MUST watch together during your next reunion" },
+    { topic: "Name the ultimate comfort food for a cozy date night" },
+    { topic: "Name a dream travel country you both want to visit" },
+    { topic: "Name a famous celebrity couple everyone talks about" },
+    { topic: "Name the first snack you buy at the airport terminal" },
+    { topic: "Name the cutest animal on earth" },
+    { topic: "Name a song that instantly reminds you of each other" },
+    { topic: "Name a city known for incredible romance" },
+    { topic: "Name a favorite pizza topping" },
+    { topic: "Name a essential item to pack in a suitcase" }
   ],
+
+  vibeSlider: [
+    { question: "How obsessed are you with getting daily good morning texts?" },
+    { question: "How much of a romantic homebody are you?" },
+    { question: "How bad is your phone addiction on a scale of 0-100?" },
+    { question: "How spontaneous are your weekend plans?" },
+    { question: "How fast do you get jealous in funny situations?" },
+    { question: "How much do you love surprising your partner?" },
+    { question: "How dramatic are you when your favorite football/sports team loses?" },
+    { question: "How excited are you for your next reunion trip?" }
+  ],
+
   percentage: [
-    "How acceptable is it to pee in the shower? (0-100)", "How annoying is it when people chew loudly?", "How likely are we to survive a zombie apocalypse?", "How much do you care about designer clothes?", "How attractive is Ryan Reynolds?", "How much of a dealbreaker is bad breath?", "How important is physical touch in a relationship?", "How addicted are you to your phone?", "How good of a liar are you?", "How much do you trust me?", "How strict were your parents?", "How good are you at keeping secrets?", "How afraid of the dark are you?", "How much do you care about what others think of you?", "How jealous do you get in relationships?", "How often do you snoop on social media?", "How confident are you in your driving?", "How much do you enjoy small talk?", "How competitive are you playing board games?", "How likely are you to believe in ghosts?", "How often do you procrastinate?", "How much do you love your current job/major?", "How important is money to happiness?", "How likely are you to impulse buy something online?", "How good is your memory?", "How much do you enjoy cooking?", "How messy is your bedroom right now?", "How likely are you to survive in the wilderness for a week?", "How much do you prefer dogs over cats?", "How ready are you for marriage?"
+    { question: "What percentage of our camera roll is pictures of each other or screenshots?" },
+    { question: "What percentage of long-distance arguments are just caused by being hangry or tired?" },
+    { question: "What percentage of travel budget should be spent on food alone?" },
+    { question: "What percentage of the day do you think about each other?" },
+    { question: "What percentage of voice notes are sent while walking or cooking?" }
   ],
+
+  hotTakes: [
+    { scenario: "Sharing phone passwords and location is healthy in a long-distance relationship." },
+    { scenario: "Texting 'K' or '.' at the end of a sentence is aggressive." },
+    { scenario: "Watching a episode of 'our show' without the other person is a major relationship crime." },
+    { scenario: "Pineapple belongs on pizza during movie nights." },
+    { scenario: "Surprise visits without giving a 24-hour head-up can be overwhelming." },
+    { scenario: "Sending voice notes is 10x better than typing long paragraphs." },
+    { scenario: "Couples should always have matching lockscreens." },
+    { scenario: "Double texting is completely normal and not clingy at all." }
+  ],
+
+  bucketList: [
+    { question: "For our next reunion trip, which vibe are we choosing?", optionA: "Luxury Resort & Beach Pampering", optionB: "Backpacking & Street Food Adventure" },
+    { question: "What is our ultimate late night reunion activity?", optionA: "Midnight city drive with loud music", optionB: "Stargazing with blankets & hot cocoa" },
+    { question: "What dream destination are we booking first?", optionA: "Tropical Island Bungalow (Maldives/Bali)", optionB: "Historic Romantic City (Rome/Paris/Kyoto)" },
+    { question: "How are we spending our ideal Sunday together?", optionA: "Breakfast in bed & lazy movie marathon", optionB: "Exploring local markets & cute aesthetic cafes" }
+  ],
+
+  truthOrDare: [
+    { question: "TRUTH: What was the exact moment you realized you truly cared about me?", mode: "TRUTH" },
+    { question: "TRUTH: What is one cute habit of mine that you've never told me about?", mode: "TRUTH" },
+    { question: "DARE: Send a 15-second voice note singing the chorus of your favorite love song!", mode: "DARE" },
+    { question: "DARE: Take a selfie right now with the funniest facial expression you can make and send it!", mode: "DARE" },
+    { question: "TRUTH: What is one secret thing you do right before we hop on a video call?", mode: "TRUTH" },
+    { question: "DARE: Do your best 10-second dramatic impression of me when I get hungry!", mode: "DARE" }
+  ],
+
+  blindRank: [
+    { topic: "Rank these 5 Date Ideas", items: ["Sunset Beach Picnic", "Amusement Park Ride", "Cooking Class Together", "Museum & Art Gallery", "Stargazing Drive"] },
+    { topic: "Rank these 5 Vacation Destinations", items: ["Tokyo, Japan", "Paris, France", "Santorini, Greece", "New York City, USA", "Bali, Indonesia"] },
+    { topic: "Rank these 5 Snack Choices", items: ["Fresh Warm Donuts", "Crispy Potato Chips", "Dark Chocolate Truffles", "Movie Theater Popcorn", "Ice Cream Sundae"] }
+  ],
+
   secretGuess: [
-    "Pizza", "Sushi", "Tacos", "Burgers", "Ice Cream", "Coffee", "Tea", "Beer", "Wine", "Steak",
-    "Dog", "Cat", "Lion", "Elephant", "Shark", "Penguin", "Monkey", "Snake", "Spider", "Dolphin",
-    "New York", "Paris", "Tokyo", "London", "Rome", "Beach", "Mountains", "Desert", "Forest", "City",
-    "Action Movie", "Horror Movie", "Comedy", "Rom-Com", "Sci-Fi", "Harry Potter", "Star Wars", "Marvel", "Batman", "Spider-Man",
-    "Money", "Fame", "Love", "Sleep", "Internet", "Phone", "Music", "Video Games", "Books", "Sports"
+    "Pizza", "Sushi", "Tacos", "Burgers", "Pasta", "Ice Cream", "Donuts", "Coffee", "Boba", "Pancakes",
+    "Paris", "Tokyo", "New York", "London", "Dubai", "Bali", "Rome", "Sydney", "Cairo", "Toronto",
+    "Netflix", "Spotify", "FaceTime", "Instagram", "TikTok", "WhatsApp", "YouTube", "Twitter", "Snapchat", "Pinterest",
+    "Dog", "Cat", "Panda", "Koala", "Penguin", "Dolphin", "Lion", "Rabbit", "Golden Retriever", "Owl",
+    "Beach", "Mountains", "Forest", "Disneyland", "Concert", "Roadtrip", "Spa Day", "Camping", "Sunset", "Stargazing"
   ],
+
   dares: [
-    "Let your partner send 1 text to anyone in your contacts.", "Give your partner a 2-minute foot or back massage.", "Do 15 pushups right now.", "Let your partner style your hair however they want.", "Buy your partner their favorite snack tomorrow.", "Speak with a fake accent for the next 3 rounds.", "Take a shot / drink a full glass of water.", "Do a TikTok dance chosen by your partner.", "Confess your most embarrassing childhood memory.", "Let your partner pick your outfit for tomorrow.", "Sing the chorus of a pop song loudly.", "Let your partner go through your camera roll for 1 minute.", "Do a plank for 45 seconds.", "Kiss your partner's cheek passionately.", "Eat a spoonful of hot sauce or mustard.", "Call your mom/dad and say you love them.", "Let your partner draw something on your arm with a pen.", "Do 20 squats right now.", "Speak only in whispers for the next 2 rounds.", "Let your partner write a comment on a friend's Instagram post.", "Hold your breath for as long as you can.", "Act like a dog for 30 seconds.", "Let your partner tickle you for 10 seconds.", "Share the last note you wrote in your Notes app.", "Take a completely unflattering selfie and make it your lock screen.", "Let your partner read the last 3 texts you sent.", "Eat a raw slice of onion or garlic.", "Do your best impression of your partner.", "Give your partner full control of the TV remote tonight.", "Write a funny tweet and post it."
+    "Send a voice note speaking in a ridiculous accent for 20 seconds!",
+    "Change your chat wallpaper to a funny photo of your partner for 24 hours!",
+    "Send a 10-second video doing your best victory dance!",
+    "Write a 4-line silly poem about your partner and read it out loud on voice note!",
+    "Let your partner pick your next food delivery order!"
   ]
 };
 
 window.Picker = {
-  nextItem(key, arr) {
-    if (!arr || !arr.length) return {a: "A", b: "B"};
-    return arr[Math.floor(Math.random() * arr.length)];
-  },
-  freshBlindRankSet() {
-    const sets = window.BANKS.blindRank || [["1","2","3","4","5"]];
-    const set = sets[Math.floor(Math.random() * sets.length)];
-    return [...set].sort(() => Math.random() - 0.5);
+  history: {},
+  nextItem(category) {
+    const list = window.GAME_BANKS[category] || window.GAME_BANKS.wouldRather;
+    if (!this.history[category]) this.history[category] = [];
+    
+    let available = list.filter((_, idx) => !this.history[category].includes(idx));
+    if (available.length === 0) {
+      this.history[category] = [];
+      available = list;
+    }
+    const randIndex = Math.floor(Math.random() * available.length);
+    const chosenObj = available[randIndex];
+    const originalIdx = list.indexOf(chosenObj);
+    this.history[category].push(originalIdx);
+    return chosenObj;
   },
   get50Items() {
-    return window.BANKS.secretGuess;
+    return window.GAME_BANKS.secretGuess;
   }
 };

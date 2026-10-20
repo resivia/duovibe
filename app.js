@@ -1,815 +1,809 @@
-(function () {
-  "use strict";
+/* ==========================================================================
+   DUOVIBE V6.1 - PRODUCTION MULTIPLAYER REALTIME ENGINE (11 GAMES)
+   ========================================================================== */
 
-  function esc(val) {
-    return String(val == null ? "" : val).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+function getPersistentId() {
+  let uid = localStorage.getItem('duovibe_uid');
+  if (!uid) {
+    uid = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+    localStorage.setItem('duovibe_uid', uid);
+  }
+  return uid;
+}
+
+let sb = null;
+
+class DuoVibeApp {
+  constructor() {
+    this.myUid = getPersistentId();
+    this.myName = localStorage.getItem('duovibe_name') || '';
+    this.roomId = null;
+    this.isHost = false;
+    this.pollInterval = null;
+    this.isPolling = false;
+    this.roomData = null;
+    this.blindRankSelections = [null, null, null, null, null];
+    this.blindRankStep = 0;
   }
 
-  function getPersistentId() {
-    let id = localStorage.getItem("duovibe_uid");
-    if (!id) {
-      id = "user_" + Math.random().toString(36).slice(2, 10);
-      localStorage.setItem("duovibe_uid", id);
+  init() {
+    if (window.supabase) {
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
-    return id;
-  }
+    this.bindEvents();
 
-  const SUPABASE_URL = (window.CONFIG && window.CONFIG.SUPABASE_URL) || "https://euqrzxxldlsbhuyjuleo.supabase.co";
-  const SUPABASE_KEY = (window.CONFIG && window.CONFIG.SUPABASE_ANON_KEY) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1cXJ6eHhsZGxzYmh1eWp1bGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NTUzOTAsImV4cCI6MjA5MzIzMTM5MH0.J4zrhIzjIBkUmxHEPcaoxgoFudtAvXHmJaPToigR_ig";
-
-  function getClient() {
-    if (window.sb) return window.sb;
-    if (window.supabase && typeof window.supabase.createClient === "function") {
-      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-        realtime: { params: { eventsPerSecond: 10 } }
-      });
-      return window.sb;
+    const params = new URLSearchParams(window.location.search);
+    const roomParam = params.get('room');
+    if (roomParam) {
+      const codeInput = document.getElementById('join-room-code');
+      if (codeInput) codeInput.value = roomParam.toUpperCase();
     }
-    return null;
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && this.roomId) {
+        console.log("Tab focused - immediate sync...");
+        this.pollDB();
+      }
+    });
   }
 
-  window.App = {
-    myId: getPersistentId(),
-    myName: localStorage.getItem("duo_my_name") || ("Player_" + Math.floor(Math.random() * 1000)),
-    myRole: "player",
-    roomCode: null,
-    activeGame: null,
-    gameState: { choices: {}, players: {}, hostId: null, streak: 0, currentPrompt: null, secretWord: null, secretSetter: null, rankSet: null },
-    pollTimer: null,
-    realtimeChannel: null,
-    lastHash: "",
-    celebrated: false,
-    
-    init() {
-      getClient();
-      this.renderHome();
+  bindEvents() {
+    const createBtn = document.getElementById('btn-create-room');
+    const joinBtn = document.getElementById('btn-join-room');
+    const nameInput = document.getElementById('player-name-input');
 
-      // WAKE-UP LISTENER: Instantly syncs when user tabs back or unlocks phone
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden && this.roomCode) {
-          this.pollDB();
-        }
+    if (nameInput) {
+      nameInput.value = this.myName;
+      nameInput.addEventListener('input', (e) => {
+        this.myName = e.target.value.trim();
+        localStorage.setItem('duovibe_name', this.myName);
       });
-    },
+    }
 
-    isHost() { return this.gameState.hostId === this.myId; },
+    if (createBtn) {
+      createBtn.addEventListener('click', () => this.handleCreateRoom());
+    }
 
-    checkAllAnswered() {
-      const numPlayers = Object.keys(this.gameState.players || {}).length || 2;
-      const numChoices = Object.keys(this.gameState.choices || {}).length;
-      
-      if (this.activeGame === "secret-guess") return numChoices >= (numPlayers - 1);
-      if (this.activeGame === "blind-rank") {
-        const keys = Object.keys(this.gameState.players || {});
-        for (let k of keys) {
-            if (!this.gameState.choices || !this.gameState.choices[k] || Object.keys(this.gameState.choices[k]).length < 5) return false;
-        }
-        return true;
+    if (joinBtn) {
+      joinBtn.addEventListener('click', () => this.handleJoinRoom());
+    }
+  }
+
+  generateRoomCode() {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+  }
+
+  async handleCreateRoom() {
+    const nameInput = document.getElementById('player-name-input');
+    const name = (nameInput ? nameInput.value.trim() : '') || this.myName || 'Host';
+    this.myName = name;
+    localStorage.setItem('duovibe_name', name);
+
+    const code = this.generateRoomCode();
+    const newRoom = {
+      id: code,
+      host_id: this.myUid,
+      host_name: name,
+      players: [{ id: this.myUid, name: name, role: 'host' }],
+      state: 'LOBBY',
+      game_type: null,
+      current_prompt: null,
+      choices: {},
+      streak: 0,
+      round: 1,
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      const { data, error } = await sb.from('rooms').insert([newRoom]).select().single();
+      if (error) {
+        alert('Could not create room: ' + error.message);
+        return;
       }
-      return numChoices >= numPlayers;
-    },
+      this.roomId = code;
+      this.isHost = true;
+      this.roomData = data;
+      this.startPolling();
+      this.renderScreen();
+    } catch (err) {
+      console.error(err);
+      alert('Network error creating room.');
+    }
+  }
 
-    renderHome() {
-      const c = document.getElementById("main-content");
-      if (!c) return;
-      c.innerHTML = `
-        <div class="workspace-shell" style="text-align:center;">
-          <div style="font-size:60px; margin-bottom:10px;">🔥</div>
-          <h2>DuoVibe</h2>
-          <p style="margin-bottom:32px;">Are you on the same wavelength?</p>
-          
-          <div style="text-align:left;">
-            <label style="font-size:13px; font-weight:800; color:rgba(255,255,255,0.6); text-transform:uppercase; margin-left:8px;">Your Handle</label>
-            <input id="input-my-name" value="${esc(this.myName)}" class="game-input" placeholder="Type your name..." />
-          </div>
-          
-          <div style="margin-top:32px;">
-            <button class="btn-primary" onclick="App.createRoom()">Create Session</button>
-            <div class="divider">Join a Friend</div>
-            <div style="display:flex; gap:12px;">
-              <input id="input-room-code" placeholder="CODE" class="game-input" style="text-transform:uppercase; text-align:center; margin:0; flex:1;" maxlength="6" />
-              <button class="btn-secondary" style="width:120px; background:rgba(255,255,255,0.15);" onclick="App.joinRoomWithCode()">Join</button>
-            </div>
-          </div>
-        </div>
-      `;
-    },
+  async handleJoinRoom() {
+    const nameInput = document.getElementById('player-name-input');
+    const name = (nameInput ? nameInput.value.trim() : '') || this.myName || 'Player';
+    const codeInput = document.getElementById('join-room-code');
+    const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
 
-    saveName() {
-      const el = document.getElementById("input-my-name");
-      if (el && el.value.trim()) {
-        this.myName = el.value.trim();
-        localStorage.setItem("duo_my_name", this.myName);
-      }
-    },
+    if (!code) {
+      alert('Please enter a valid 4-digit room code.');
+      return;
+    }
 
-    createRoom() {
-      this.saveName();
-      this.myRole = "host";
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      this.joinRoom(code, true);
-    },
+    this.myName = name;
+    localStorage.setItem('duovibe_name', name);
 
-    joinRoomWithCode() {
-      this.saveName();
-      this.myRole = "player";
-      const el = document.getElementById("input-room-code");
-      const code = el ? el.value.trim().toUpperCase() : "";
-      if (code.length === 6) this.joinRoom(code, false);
-      else alert("Invalid session code.");
-    },
-
-    async joinRoom(code, creatingAsHost) {
-      this.roomCode = code;
-      this.activeGame = null;
-      this.gameState = { choices: {}, players: {}, hostId: creatingAsHost ? this.myId : null, streak: 0 };
-      this.renderLobby();
-
-      const sb = getClient();
-      if (!sb) return;
-
-      try {
-        let { data: room } = await sb.from("rooms").select("*").eq("id", code).maybeSingle();
-        if (!room) {
-          if (!creatingAsHost) { alert("Session not found."); this.renderHome(); return; }
-          const state = { hostId: this.myId, players: { [this.myId]: { name: this.myName, role: "host" } }, choices: {}, streak: 0 };
-          await sb.from("rooms").insert({ id: code, current_game: "", game_state: state });
-          this.gameState = state;
-        } else {
-          let state = room.game_state || { choices: {}, players: {}, hostId: null, streak: 0 };
-          state.players = state.players || {};
-          
-          if (state.players[this.myId]) {
-             this.myRole = state.players[this.myId].role;
-             if (this.myRole === 'host') state.hostId = this.myId;
-          } else {
-             if (!state.hostId && creatingAsHost) state.hostId = this.myId;
-             this.myRole = (state.hostId === this.myId) ? "host" : "player";
-          }
-          
-          state.players[this.myId] = { name: this.myName, role: this.myRole };
-          await sb.from("rooms").update({ game_state: state, updated_at: new Date().toISOString() }).eq("id", code);
-          this.activeGame = room.current_game || null;
-          this.gameState = state;
-        }
-
-        // Setup Hybrid Realtime WebSockets + Polling Backup
-        this.setupRealtimeSubscription(code);
-
-        if (this.pollTimer) clearInterval(this.pollTimer);
-        this.pollTimer = setInterval(() => this.pollDB(), 2000); // Backed up by 2s poll
-        
-        this.renderLobby();
-      } catch (e) { console.error("Join error:", e); }
-    },
-
-    setupRealtimeSubscription(code) {
-      const sb = getClient();
-      if (!sb) return;
-
-      if (this.realtimeChannel) {
-        try { sb.removeChannel(this.realtimeChannel); } catch(e){}
+    try {
+      const { data: room, error } = await sb.from('rooms').select('*').eq('id', code).single();
+      if (error || !room) {
+        alert('Room not found! Check code and try again.');
+        return;
       }
 
-      this.realtimeChannel = sb.channel("duovibe_live_" + code, {
-        config: { broadcast: { self: false } }
-      });
+      let players = room.players || [];
+      const existingIndex = players.findIndex(p => p.id === this.myUid);
+      if (existingIndex >= 0) {
+        players[existingIndex].name = name;
+      } else {
+        players.push({ id: this.myUid, name: name, role: 'player' });
+      }
 
-      this.realtimeChannel
-        .on("broadcast", { event: "state_sync" }, () => {
-          this.pollDB(); // Instant update when partner makes a move!
+      const { data: updatedRoom } = await sb.from('rooms')
+        .update({ players: players, updated_at: new Date().toISOString() })
+        .eq('id', code)
+        .select()
+        .single();
+
+      this.roomId = code;
+      this.isHost = (room.host_id === this.myUid);
+      this.roomData = updatedRoom || room;
+      this.startPolling();
+      this.renderScreen();
+    } catch (err) {
+      console.error(err);
+      alert('Network error joining room.');
+    }
+  }
+
+  startPolling() {
+    if (this.pollInterval) clearInterval(this.pollInterval);
+    this.pollDB();
+    this.pollInterval = setInterval(() => this.pollDB(), 800);
+  }
+
+  async pollDB() {
+    if (!this.roomId || this.isPolling) return;
+    this.isPolling = true;
+
+    try {
+      const { data, error } = await sb.from('rooms').select('*').eq('id', this.roomId).single();
+      if (error || !data) return;
+
+      this.syncStateWithDB(data);
+    } catch (err) {
+      console.warn('Poll error:', err);
+    } finally {
+      this.isPolling = false;
+    }
+  }
+
+  syncStateWithDB(remote) {
+    if (!this.roomData) {
+      this.roomData = remote;
+      this.renderScreen();
+      return;
+    }
+
+    const currentSig = JSON.stringify({
+      state: this.roomData.state,
+      game_type: this.roomData.game_type,
+      round: this.roomData.round,
+      prompt: this.roomData.current_prompt,
+      pCount: (this.roomData.players || []).length,
+      choices: this.roomData.choices || {},
+      streak: this.roomData.streak
+    });
+
+    const remoteSig = JSON.stringify({
+      state: remote.state,
+      game_type: remote.game_type,
+      round: remote.round,
+      prompt: remote.current_prompt,
+      pCount: (remote.players || []).length,
+      choices: remote.choices || {},
+      streak: remote.streak
+    });
+
+    this.roomData = remote;
+    this.isHost = (remote.host_id === this.myUid);
+
+    if (currentSig !== remoteSig) {
+      this.renderScreen();
+    }
+  }
+
+  async submitChoice(choiceValue) {
+    if (!this.roomId) return;
+
+    try {
+      const { data: fresh } = await sb.from('rooms').select('choices').eq('id', this.roomId).single();
+      const choices = (fresh && fresh.choices) ? fresh.choices : (this.roomData.choices || {});
+
+      choices[this.myUid] = choiceValue;
+
+      const { data: updated, error } = await sb.from('rooms')
+        .update({
+          choices: choices,
+          updated_at: new Date().toISOString()
         })
-        .subscribe();
-    },
+        .eq('id', this.roomId)
+        .select()
+        .single();
 
-    broadcastSync() {
-      if (this.realtimeChannel) {
-        this.realtimeChannel.send({
-          type: "broadcast",
-          event: "state_sync",
-          payload: { sender: this.myId }
-        });
+      if (!error && updated) {
+        this.roomData = updated;
+        this.renderScreen();
       }
-    },
+    } catch (err) {
+      console.error('Submit choice error:', err);
+    }
+  }
 
-    async pollDB() {
-      const sb = getClient();
-      if (!this.roomCode || !sb) return;
-      try {
-        let { data: room, error } = await sb.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
-        if (error || !room) return;
+  async hostStartDrafting(gameType) {
+    if (!this.isHost) return;
+    const updates = {
+      state: 'DRAFTING',
+      game_type: gameType,
+      choices: {},
+      updated_at: new Date().toISOString()
+    };
+    const { data } = await sb.from('rooms').update(updates).eq('id', this.roomId).select().single();
+    if (data) {
+      this.roomData = data;
+      this.renderScreen();
+    }
+  }
 
-        const remoteGame = room.current_game || "";
-        const remoteState = room.game_state || { choices: {}, players: {}, hostId: null, streak: 0 };
-        remoteState.players = remoteState.players || {};
-        remoteState.choices = remoteState.choices || {};
+  async hostLaunchGame(gameType, customPrompt = null) {
+    if (!this.isHost) return;
+    const prompt = customPrompt || window.Picker.nextItem(gameType);
+    this.blindRankSelections = [null, null, null, null, null];
+    this.blindRankStep = 0;
 
-        let needsSync = false;
-        if (!remoteState.players[this.myId]) {
-          remoteState.players[this.myId] = { name: this.myName, role: this.myRole };
-          needsSync = true;
-        }
+    const updates = {
+      state: 'PLAYING',
+      game_type: gameType,
+      current_prompt: prompt,
+      choices: {},
+      updated_at: new Date().toISOString()
+    };
 
-        const myLocalChoices = this.gameState.choices[this.myId];
-        if (myLocalChoices !== undefined) {
-          if (JSON.stringify(remoteState.choices[this.myId]) !== JSON.stringify(myLocalChoices)) {
-            remoteState.choices[this.myId] = myLocalChoices;
-            needsSync = true;
-          }
-        }
+    const { data } = await sb.from('rooms').update(updates).eq('id', this.roomId).select().single();
+    if (data) {
+      this.roomData = data;
+      this.renderScreen();
+    }
+  }
 
-        if (needsSync) {
-          await sb.from("rooms").update({ game_state: remoteState }).eq("id", this.roomCode);
-        }
+  async hostNextRound() {
+    if (!this.isHost) return;
+    const gameType = this.roomData.game_type;
+    const prompt = window.Picker.nextItem(gameType);
+    this.blindRankSelections = [null, null, null, null, null];
+    this.blindRankStep = 0;
 
-        const hash = JSON.stringify({ g: remoteGame, s: remoteState });
-        if (hash !== this.lastHash) {
-          this.lastHash = hash;
-          this.activeGame = remoteGame || null;
-          this.gameState = remoteState;
-          this.renderCurrentView();
-        }
-      } catch (e) {}
-    },
+    const updates = {
+      state: 'PLAYING',
+      round: (this.roomData.round || 1) + 1,
+      current_prompt: prompt,
+      choices: {},
+      updated_at: new Date().toISOString()
+    };
 
-    renderCurrentView() {
-      if (this.activeGame) {
-        if (!document.querySelector(".active-game-wrapper")) this.renderActiveGame();
-        else this.updateGameChoicesUI();
+    const { data } = await sb.from('rooms').update(updates).eq('id', this.roomId).select().single();
+    if (data) {
+      this.roomData = data;
+      this.renderScreen();
+    }
+  }
+
+  async hostReturnToLobby() {
+    if (!this.isHost) return;
+    const updates = {
+      state: 'LOBBY',
+      game_type: null,
+      current_prompt: null,
+      choices: {},
+      updated_at: new Date().toISOString()
+    };
+
+    const { data } = await sb.from('rooms').update(updates).eq('id', this.roomId).select().single();
+    if (data) {
+      this.roomData = data;
+      this.renderScreen();
+    }
+  }
+
+  async updateStreak(newStreak) {
+    if (!this.isHost) return;
+    await sb.from('rooms').update({ streak: newStreak }).eq('id', this.roomId);
+  }
+
+  checkAllAnswered() {
+    if (!this.roomData || !this.roomData.choices) return false;
+    const players = this.roomData.players || [];
+    const choices = this.roomData.choices;
+    const count = Object.keys(choices).length;
+    
+    if (players.length <= 1) {
+      return count >= 1;
+    }
+    return count >= players.length;
+  }
+
+  renderScreen() {
+    const appRoot = document.getElementById('app-root');
+    if (!appRoot) return;
+
+    if (!this.roomId || !this.roomData) {
+      const landing = document.getElementById('landing-view');
+      const gameView = document.getElementById('game-view');
+      if (landing) landing.style.display = 'block';
+      if (gameView) gameView.style.display = 'none';
+      return;
+    }
+
+    const landing = document.getElementById('landing-view');
+    const gameView = document.getElementById('game-view');
+    if (landing) landing.style.display = 'none';
+    if (gameView) gameView.style.display = 'block';
+
+    const state = this.roomData.state || 'LOBBY';
+
+    if (state === 'LOBBY') {
+      this.renderLobby(gameView);
+    } else if (state === 'DRAFTING') {
+      this.renderDrafting(gameView);
+    } else if (state === 'PLAYING') {
+      if (this.checkAllAnswered()) {
+        this.renderComparison(gameView);
       } else {
-        if (!document.querySelector(".lobby-wrapper")) this.renderLobby();
-        else this.updatePlayersUI(this.gameState.players || {});
+        this.renderActiveGame(gameView);
       }
-    },
+    }
+  }
 
-    async pushDB(evaluateStreak = false) {
-      const sb = getClient();
-      if (!this.roomCode || !sb) return;
-      try {
-        let { data: room } = await sb.from("rooms").select("*").eq("id", this.roomCode).maybeSingle();
-        let state = room ? (room.game_state || {}) : {};
+  renderLobby(container) {
+    const players = this.roomData.players || [];
+    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${this.roomId}`;
 
-        state.hostId = this.gameState.hostId;
-        state.players = Object.assign({}, state.players || {}, this.gameState.players || {});
-        state.choices = Object.assign({}, state.choices || {}, this.gameState.choices || {});
-        
-        state.currentPrompt = this.gameState.currentPrompt || null;
-        state.rankSet = this.gameState.rankSet || null;
-        state.secretWord = this.gameState.secretWord || null;
-        state.secretSetter = this.gameState.secretSetter || null;
-        
-        if (evaluateStreak) state.streak = this.gameState.streak;
-        else state.streak = state.streak || this.gameState.streak || 0;
-
-        const currentGame = this.activeGame || "";
-        this.gameState = state;
-        this.lastHash = JSON.stringify({ g: currentGame, s: state });
-
-        await sb.from("rooms").update({ current_game: currentGame, game_state: state }).eq("id", this.roomCode);
-        
-        // Broadcast instant websocket notification to partner!
-        this.broadcastSync();
-      } catch (e) {}
-    },
-
-    updatePlayersUI(playersMap) {
-      const container = document.getElementById("connected-players-list");
-      if (!container) return;
-      const items = [];
-      Object.keys(playersMap).forEach(id => {
-        const p = playersMap[id];
-        const pName = typeof p === "object" ? p.name : p;
-        const isHost = id === this.gameState.hostId;
-        items.push(`<span class="badge ${isHost ? 'badge-host' : 'badge-player'}">
-          ${isHost ? '⭐' : '👤'} ${esc(pName)}
-        </span>`);
-      });
-      container.innerHTML = items.join("");
-    },
-
-    renderLobby() {
-      const c = document.getElementById("main-content");
-      if (!c) return;
-      const isHost = this.isHost();
-      const streak = this.gameState.streak || 0;
-
-      c.innerHTML = `
-        <div class="workspace-shell lobby-wrapper">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-            <div>
-              <div style="font-size:12px; font-weight:800; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Room Code</div>
-              <div style="font-size:36px; font-weight:900; letter-spacing:4px; color:var(--secondary); cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(this.roomCode)}'); alert('Copied!');">${esc(this.roomCode)}</div>
-            </div>
-            <div class="badge badge-streak">🔥 ${streak}</div>
+    let html = `
+      <div class="glass-card animate-fade">
+        <div class="header-banner">
+          <span class="badge-pill pulse">&#128308; LIVE LOBBY</span>
+          <h2 style="margin-top:8px;">Room Code: <span class="text-glow">${this.roomId}</span></h2>
+          <p style="font-size:0.9rem; opacity:0.8;">Share code with your partner or friends!</p>
+          <div style="margin-top:10px;">
+            <button class="btn-secondary" id="btn-copy-link" style="padding: 8px 16px; font-size: 0.85rem;">
+              &#128203; Copy Direct Link
+            </button>
           </div>
-          
-          <div style="background:rgba(0,0,0,0.3); padding:20px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
-            <div style="font-size:12px; font-weight:800; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase;">Connected</div>
-            <div id="connected-players-list" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+        </div>
+
+        <div style="margin:20px 0;">
+          <h4 style="margin-bottom:12px; font-size:1rem; opacity:0.9;">Connected Players (${players.length})</h4>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            ${players.map(p => `
+              <div class="badge-pill ${p.id === this.myUid ? 'active-player' : ''}" style="padding:10px 16px; font-size:0.9rem;">
+                ${p.role === 'host' ? '&#128081;' : '&#128104;&#8205;&#128187;'} ${p.name} ${p.id === this.myUid ? '(You)' : ''}
+              </div>
+            `).join('')}
           </div>
-
-          ${isHost ? `
-            <h3 style="margin-top:32px; font-size:24px; text-align:center;">Select Mode</h3>
-            <div class="games-grid">
-              <div class="game-mode-card" onclick="App.launchGame('secret-guess')"><span>🕵️‍♂️</span><h4>Mastermind</h4></div>
-              <div class="game-mode-card" onclick="App.launchGame('would-rather')"><span>🤔</span><h4>Would Rather</h4></div>
-              <div class="game-mode-card" onclick="App.launchGame('couple-compat')"><span>❤️</span><h4>Compat Quiz</h4></div>
-              <div class="game-mode-card" onclick="App.launchGame('mind-meld')"><span>🧠</span><h4>Mind Meld</h4></div>
-              <div class="game-mode-card" onclick="App.launchGame('percentage')"><span>💯</span><h4>Vibe Slider</h4></div>
-              <div class="game-mode-card" style="border-color:var(--secondary); background:rgba(0,229,255,0.05);" onclick="App.launchGame('blind-rank')"><span>🔢</span><h4 style="color:var(--secondary);">Blind Rank</h4></div>
-            </div>
-          ` : `
-            <div style="margin-top:30px; text-align:center; padding:40px 20px; background:rgba(255,255,255,0.05); border:2px dashed rgba(255,255,255,0.2); border-radius:24px;">
-              <h4 style="font-size:20px; font-weight:800;">Waiting for Host...</h4>
-              <p style="font-size:15px; margin-top:12px;">They are picking the next game. Sit tight.</p>
-            </div>
-          `}
         </div>
-      `;
-      this.updatePlayersUI(this.gameState.players || {});
-    },
+    `;
 
-    async evaluateStreak() {
-      if (!this.isHost()) return;
-      const choices = this.gameState.choices || {};
-      const keys = Object.keys(choices);
-      
-      if (!this.checkAllAnswered()) return;
-      
-      if (this.activeGame === "secret-guess" && this.gameState.secretWord) {
-        const guesserId = keys.find(k => k !== this.gameState.secretSetter);
-        if (guesserId && choices[guesserId]) {
-           if (String(choices[guesserId]).toLowerCase() === String(this.gameState.secretWord).toLowerCase()) this.gameState.streak = (this.gameState.streak || 0) + 1;
-           else this.gameState.streak = 0;
-        }
-      } else if (keys.length >= 2 && this.activeGame !== "blind-rank") {
-        const vals = keys.map(k => choices[k]);
-        let isMatch = false;
-        
-        if (this.activeGame === "percentage") isMatch = Math.abs(parseInt(vals[0]) - parseInt(vals[1])) <= 15;
-        else if (this.activeGame === "mind-meld") isMatch = String(vals[0]).toLowerCase() === String(vals[1]).toLowerCase();
-        else isMatch = vals[0] === vals[1];
-
-        if (isMatch) this.gameState.streak = (this.gameState.streak || 0) + 1;
-        else this.gameState.streak = 0;
-      }
-    },
-
-    async launchGame(gameId) {
-      if (!this.isHost()) return;
-      await this.evaluateStreak(); 
-
-      this.activeGame = gameId;
-      this.gameState.choices = {};
-      this.gameState.currentPrompt = null;
-      this.gameState.secretWord = null;
-      this.gameState.secretSetter = null;
-      this.gameState.rankSet = null;
-      this.celebrated = false;
-
-      await this.pushDB(true);
-      this.renderActiveGame();
-    },
-
-    async exitGame() {
-      if (!this.isHost()) return;
-      await this.evaluateStreak();
-      this.activeGame = null;
-      this.gameState.choices = {};
-      await this.pushDB(true);
-      this.renderLobby();
-    },
-
-    async submitCustomPrompt(val) {
-      if (!val) return;
-      if (typeof val === 'object' && (!val.a || !val.b)) return;
-      this.gameState.currentPrompt = val;
-      await this.pushDB();
-      this.renderActiveGame();
-    },
-
-    async submitCustomRank(val) {
-      if (!val || !val.trim()) return;
-      let items = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
-      while(items.length < 5) items.push("Empty");
-      this.gameState.rankSet = items.slice(0,5);
-      this.gameState.currentPrompt = "ready";
-      await this.pushDB();
-      this.renderActiveGame();
-    },
-
-    async rollRandomPrompt() {
-      const g = this.activeGame;
-      const b = window.BANKS || {};
-      const p = window.Picker;
-      
-      if (g === "would-rather") this.gameState.currentPrompt = p.nextItem("wouldRather", b.wouldRather);
-      else if (g === "red-green-flag") this.gameState.currentPrompt = p.nextItem("redGreenFlag", b.redGreenFlag);
-      else if (g === "couple-compat") this.gameState.currentPrompt = p.nextItem("compatQuiz", b.compatQuiz);
-      else if (g === "mind-meld") this.gameState.currentPrompt = p.nextItem("mindMeld", b.mindMeld);
-      else if (g === "percentage") this.gameState.currentPrompt = p.nextItem("percentage", b.percentage);
-      else if (g === "blind-rank") {
-         this.gameState.rankSet = p.freshBlindRankSet();
-         this.gameState.currentPrompt = "ready";
-      } else if (g === "secret-guess") {
-         this.gameState.secretWord = p.nextItem("secretGuess", b.secretGuess);
-         this.gameState.secretSetter = this.gameState.hostId;
-         this.gameState.currentPrompt = "ready";
-      }
-      await this.pushDB();
-      this.renderActiveGame();
-    },
-
-    async submitChoice(val) {
-      if (!val || !val.toString().trim()) return;
-      this.gameState.choices = this.gameState.choices || {};
-      this.gameState.choices[this.myId] = val.toString().trim();
-      await this.pushDB();
-      this.renderActiveGame();
-    },
-
-    async hostSetSecret(val) {
-      if (!this.isHost()) return;
-      this.gameState.secretWord = val;
-      this.gameState.secretSetter = this.myId;
-      this.gameState.currentPrompt = "ready";
-      await this.pushDB();
-      this.renderActiveGame();
-    },
-
-    async submitBlindRank(slot, item) {
-      this.gameState.choices = this.gameState.choices || {};
-      if (typeof this.gameState.choices[this.myId] !== "object") this.gameState.choices[this.myId] = {};
-      this.gameState.choices[this.myId][slot] = item;
-      
-      const numAnswered = Object.keys(this.gameState.choices[this.myId]).length;
-      if (numAnswered === 5 && window.confetti && !this.celebrated) {
-          window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.8 } });
-      }
-      await this.pushDB();
-      this.renderActiveGame();
-    },
-
-    getDraftingBody() {
-      if (!this.isHost()) {
-         return `
-            <div style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.05); border:2px dashed rgba(255,255,255,0.2); border-radius:24px;">
-              <div style="font-size:40px; margin-bottom:16px;">⏳</div>
-              <h3 style="margin-bottom:8px;">Configuring Round</h3>
-              <p>Host is picking the prompt...</p>
-            </div>
-         `;
-      }
-
-      const g = this.activeGame;
-      let html = `
-        <div style="text-align:center; margin-bottom:32px;">
-          <h2 style="font-size:28px;">Setup Phase</h2>
-          <p>Write your own prompt or pick randomly!</p>
-        </div>
-      `;
-
-      if (g === "would-rather") {
-         html += `
-           <input id="draft-a" class="game-input" placeholder="Option A">
-           <div class="divider">VS</div>
-           <input id="draft-b" class="game-input" placeholder="Option B">
-           <button class="btn-primary" style="margin-top:24px;" onclick="App.submitCustomPrompt({a: document.getElementById('draft-a').value, b: document.getElementById('draft-b').value})">Lock In Custom</button>
-         `;
-      } else if (g === "blind-rank") {
-         html += `
-           <textarea id="draft-rank" class="game-input" placeholder="Input 5 items (comma separated)" rows="3" style="resize:none; padding:16px;"></textarea>
-           <button class="btn-primary" style="margin-top:24px;" onclick="App.submitCustomRank(document.getElementById('draft-rank').value)">Lock In Custom</button>
-         `;
-      } else if (g === "secret-guess") {
-         const items = window.Picker.get50Items();
-         let gridHtml = `<div class="options-grid">`;
-         items.forEach(item => {
-           gridHtml += `<div class="option-chip" onclick="App.hostSetSecret('${esc(item)}')">${esc(item)}</div>`;
-         });
-         gridHtml += `</div>`;
-         html = `<h3>Select Target Node</h3><p>Choose 1 of 50 items for the user to identify.</p>${gridHtml}`;
-      } else {
-         let ph = "Type a scenario/question...";
-         if (g === "mind-meld") ph = "Type a category (e.g. A fast food chain)";
-         if (g === "percentage") ph = "Type a 1-100 question (e.g. How annoying is...)";
-
-         html += `
-           <input id="draft-text" class="game-input" placeholder="${ph}">
-           <button class="btn-primary" style="margin-top:24px;" onclick="App.submitCustomPrompt(document.getElementById('draft-text').value)">Lock In Custom</button>
-         `;
-      }
-
+    if (this.isHost) {
       html += `
-        <div class="divider">OR</div>
-        <button class="btn-secondary" onclick="App.rollRandomPrompt()">🎲 Generate Random Prompt</button>
-      `;
-      return html;
-    },
-
-    getSecretGuessBody() {
-      const isSetter = this.myId === this.gameState.secretSetter;
-      const secret = this.gameState.secretWord;
-      const myChoice = (this.gameState.choices && this.gameState.choices[this.myId]) ? this.gameState.choices[this.myId] : null;
-
-      if (isSetter) {
-        return `
-          <h3>Target Locked</h3>
-          <div style="background:rgba(255, 51, 102, 0.15); border:2px solid #FF3366; padding:24px; border-radius:24px; margin:20px 0; text-align:center; box-shadow:0 0 20px rgba(255,51,102,0.3);">
-            <span style="font-size:12px; font-weight:900; color:#FF3366; letter-spacing:2px; text-transform:uppercase;">SECRET</span>
-            <div style="font-size:28px; font-weight:900; margin-top:8px; color:#FFF;">${esc(secret)}</div>
-          </div>
-          <div style="padding:32px; text-align:center; background:rgba(0,0,0,0.2); border:1px dashed rgba(255,255,255,0.2); border-radius:20px;">
-            <p>Waiting for them to guess...</p>
-          </div>
-        `;
-      } else {
-        if (!myChoice) {
-          const items = window.Picker.get50Items();
-          let gridHtml = `<div class="options-grid">`;
-          items.forEach(item => {
-            gridHtml += `<div class="option-chip" onclick="App.submitChoice('${esc(item)}')">${esc(item)}</div>`;
-          });
-          gridHtml += `</div>`;
-
-          return `
-            <h3>Identify Target</h3>
-            <p>The host has locked a target node. Select the matching string.</p>
-            ${gridHtml}
-          `;
-        } else {
-          return `
-            <h3>Submission Sent</h3>
-            <div style="background:rgba(0, 229, 255, 0.15); border:2px solid #00E5FF; padding:24px; border-radius:24px; margin:20px 0; text-align:center; box-shadow:0 0 20px rgba(0,229,255,0.2);">
-              <span style="font-size:12px; font-weight:900; color:#00E5FF; letter-spacing:2px; text-transform:uppercase;">YOUR GUESS</span>
-              <div style="font-size:28px; font-weight:900; margin-top:8px; color:#FFF;">${esc(myChoice)}</div>
+        <div style="margin-top:24px;">
+          <h3 style="margin-bottom:14px;">Select Game Mode</h3>
+          <div class="game-selector-grid">
+            <div class="game-card" onclick="window.App.hostLaunchGame('wouldRather')">
+              <div class="game-icon">&#129300;</div>
+              <div class="game-title">Would You Rather</div>
+              <div class="game-desc">Option A vs Option B consensus check.</div>
             </div>
-          `;
-        }
-      }
-    },
-
-    renderComparison() {
-      const choices = this.gameState.choices || {};
-      const keys = Object.keys(choices);
-      const allAnswered = this.checkAllAnswered();
-
-      if (this.activeGame === "secret-guess") {
-         const setterId = this.gameState.secretSetter;
-         const guesserId = Object.keys(this.gameState.players || {}).find(k => k !== setterId);
-         const guess = guesserId ? choices[guesserId] : null;
-         
-         if (!guess) return ``;
-         
-         let html = '<div style="margin-top:32px; padding-top:24px; border-top:1px solid rgba(255,255,255,0.1);">';
-         html += `<div style="display:flex; justify-content:space-between; margin-bottom:16px; align-items:center;"><span style="color:var(--text-muted); font-size:14px; font-weight:800;">Target:</span><span style="font-weight:900; font-size:20px; color:var(--danger);">${esc(this.gameState.secretWord)}</span></div>`;
-         html += `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--text-muted); font-size:14px; font-weight:800;">Guessed:</span><span style="font-weight:900; font-size:20px; color:#FFF;">${esc(guess)}</span></div>`;
-         
-         if (String(guess).toLowerCase() === String(this.gameState.secretWord).toLowerCase()) {
-            if (window.confetti && allAnswered && !this.celebrated) { window.confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } }); this.celebrated = true; }
-            html += `<div class="match-box" style="display:flex; flex-direction:column; gap:6px;">
-                       <span style="font-size:22px;">🔥 VIBE MATCH!</span>
-                       <span style="font-size:14px; font-weight:800; color:rgba(0,0,0,0.6); background:rgba(255,255,255,0.3); padding:4px 12px; border-radius:12px; align-self:center;">TARGET ACQUIRED!</span>
-                     </div>`;
-         } else {
-            html += `<div class="penalty-box"><strong style="font-size:24px;">❌ FAILED</strong></div>`;
-         }
-         html += '</div>';
-         return html;
-      }
-
-      if (keys.length === 0) return '';
-
-      if (this.activeGame === "blind-rank") {
-        if (!allAnswered) return `<div style="margin-top:32px; color:var(--secondary); font-size:15px; font-weight:900; text-align:center; text-transform:uppercase; letter-spacing:1px; animation: pulse 1.5s infinite;">Waiting for Partner...</div>`;
-
-        let html = '<div style="display:flex; gap:16px; margin-top:32px; padding-top:24px; border-top:1px solid rgba(255,255,255,0.1);">';
-        keys.forEach(k => {
-          const pObj = this.gameState.players && this.gameState.players[k];
-          const name = (k === this.myId) ? "You" : (pObj ? (pObj.name || pObj) : "Partner");
-          html += `<div style="flex:1;"><strong style="font-size:14px; color:var(--secondary); text-transform:uppercase; display:block; text-align:center; margin-bottom:12px;">${esc(name)}</strong>`;
-          for(let i=1; i<=5; i++) {
-            html += `<div style="font-size:14px; font-weight:800; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); margin-top:8px; padding:12px; border-radius:12px;">${i}. ${esc(choices[k][i])}</div>`;
-          }
-          html += `</div>`;
-        });
-        html += '</div>';
-        return html;
-      }
-
-      let html = '<div style="margin-top:32px; padding:32px 24px; background:rgba(0,0,0,0.2); border-radius:24px; border:1px solid rgba(255,255,255,0.05);">';
-      keys.forEach(k => {
-        const pObj = this.gameState.players && this.gameState.players[k];
-        const name = (k === this.myId) ? "You" : (pObj ? (pObj.name || pObj) : "Partner");
-
-        let displayChoice = esc(choices[k]);
-        if (!allAnswered && k !== this.myId) {
-           displayChoice = `<span style="color:var(--secondary); font-weight:900; font-size:14px; letter-spacing:2px;">[ HIDDEN ]</span>`;
-        }
-
-        html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1);">
-                   <span style="color:var(--text-muted); font-weight:800; font-size:16px;">${esc(name)}:</span>
-                   <span style="font-weight:900; font-size:18px;">${displayChoice}</span>
-                 </div>`;
-      });
-
-      if (allAnswered && keys.length >= 2) {
-        const vals = keys.map(k => choices[k]);
-        let isMatch = false;
-
-        if (this.activeGame === "percentage") isMatch = Math.abs(parseInt(vals[0]) - parseInt(vals[1])) <= 15;
-        else if (this.activeGame === "mind-meld") isMatch = String(vals[0]).toLowerCase() === String(vals[1]).toLowerCase();
-        else isMatch = vals[0] === vals[1];
-
-        if (isMatch) {
-          if (window.confetti && !this.celebrated) { window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } }); this.celebrated = true; }
-
-          let matchReason = "EXACT MATCH!";
-          if (this.activeGame === "couple-compat") matchReason = `BOTH AGREED ON ${esc(vals[0]).toUpperCase()}!`;
-          else if (this.activeGame === "percentage") matchReason = `WITHIN 15 POINTS!`;
-          else if (this.activeGame === "mind-meld") matchReason = `EXACT MIND MELD!`;
-          else if (this.activeGame === "would-rather") matchReason = `SAME CHOICE!`;
-
-          html += `<div class="match-box" style="display:flex; flex-direction:column; gap:6px;">
-                     <span style="font-size:22px;">🔥 VIBE MATCH!</span>
-                     <span style="font-size:14px; font-weight:800; color:rgba(0,0,0,0.6); background:rgba(255,255,255,0.3); padding:4px 12px; border-radius:12px; align-self:center;">${matchReason}</span>
-                   </div>`;
-        } else {
-          html += `<div style="text-align:center;font-weight:900;margin-top:24px;color:var(--danger);font-size:20px;text-transform:uppercase;letter-spacing:1px;">❌ Streak Broken</div>`;
-          if ((this.gameState.streak || 0) >= 2) {
-            const dares = window.BANKS.dares || ["Take a drink!"];
-            const dareStr = dares[(this.roomCode.charCodeAt(0) + vals[0].length) % dares.length];
-            html += `<div class="penalty-box"><strong style="font-size:18px; letter-spacing:1.5px; text-transform:uppercase;">🚨 Penalty 🚨</strong><br/><span style="font-weight:800; font-size:18px; margin-top:12px; display:block; line-height:1.4;">${esc(dareStr)}</span></div>`;
-          }
-        }
-      } else if (!allAnswered) {
-         html += `<div style="text-align:center; font-weight:800; color:var(--secondary); font-size:15px; margin-top:24px; text-transform:uppercase; letter-spacing:1px; animation: pulse 1.5s infinite;">Waiting for partner...</div>`;
-      }
-      
-      html += '</div>';
-      return html;
-    },
-
-    updateGameChoicesUI() {
-      const bar = document.querySelector(".comparison-container");
-      if (bar) {
-        const temp = document.createElement("div");
-        temp.innerHTML = this.renderComparison();
-        bar.innerHTML = temp.firstElementChild ? temp.firstElementChild.innerHTML : '';
-      }
-      if (this.activeGame === "blind-rank" && document.getElementById("br-body")) {
-        document.getElementById("br-body").innerHTML = this.getBlindRankBody();
-      }
-      if (this.activeGame === "secret-guess" && document.getElementById("sg-body")) {
-        document.getElementById("sg-body").innerHTML = this.getSecretGuessBody();
-      }
-    },
-
-    getBlindRankBody() {
-      const rankSet = this.gameState.rankSet || [];
-      const myRanks = (this.gameState.choices && this.gameState.choices[this.myId]) || {};
-      const numAnswered = Object.keys(myRanks).length;
-
-      if (numAnswered < 5) {
-        const currentItem = rankSet[numAnswered];
-        let slotsHtml = "";
-        for(let i=1; i<=5; i++) {
-          if (myRanks[i]) {
-            slotsHtml += `<div style="background:rgba(255,255,255,0.05); padding:16px; margin-bottom:12px; border-radius:16px; color:rgba(255,255,255,0.4); font-size:16px; text-decoration:line-through; font-weight:800; border:2px solid rgba(255,255,255,0.1);">${i}. ${esc(myRanks[i])}</div>`;
-          } else {
-            slotsHtml += `<button class="btn-secondary" style="margin-bottom:12px; justify-content:flex-start; font-size:16px; padding:18px 20px; border-color:var(--secondary); color:var(--secondary);" onclick="App.submitBlindRank(${i}, '${esc(currentItem)}')">Lock into Slot [ ${i} ]</button>`;
-          }
-        }
-        return `
-          <div style="background:linear-gradient(135deg, var(--primary), #FF8000); color:white; padding:32px 20px; border-radius:24px; margin-bottom:30px; text-align:center; box-shadow: 0 10px 20px rgba(255,46,147,0.3);">
-            <span style="font-size:12px; font-weight:900; opacity:0.9; letter-spacing:2px; text-transform:uppercase;">ITEM ${numAnswered + 1} OF 5</span>
-            <h2 style="margin:12px 0 0 0; font-size:32px;">${esc(currentItem)}</h2>
+            <div class="game-card" onclick="window.App.hostLaunchGame('redGreenFlag')">
+              <div class="game-icon">&#128681;</div>
+              <div class="game-title">Red / Green Flag</div>
+              <div class="game-desc">Evaluate real dating & LDR scenarios.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('compatQuiz')">
+              <div class="game-icon">&#128150;</div>
+              <div class="game-title">Compatibility Quiz</div>
+              <div class="game-desc">Test who knows who best.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('hotTakes')">
+              <div class="game-icon">&#128293;</div>
+              <div class="game-title">Hot Takes Radar</div>
+              <div class="game-desc">Spicy Agree vs Disagree debate topics.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('bucketList')">
+              <div class="game-icon">&#9992;&#65039;</div>
+              <div class="game-title">LDR Bucket List</div>
+              <div class="game-desc">Match next reunion date & travel ideas.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('truthOrDare')">
+              <div class="game-icon">&#127917;</div>
+              <div class="game-title">Truth or Dare</div>
+              <div class="game-desc">Virtual LDR truths & hilarious voice dares.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostStartDrafting('mindMeld')">
+              <div class="game-icon">&#129504;</div>
+              <div class="game-title">Mind Meld</div>
+              <div class="game-desc">Type exact matching single word answers.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('vibeSlider')">
+              <div class="game-icon">&#127914;</div>
+              <div class="game-title">Vibe Slider</div>
+              <div class="game-desc">Rate intensity on a scale from 0 to 100.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('percentage')">
+              <div class="game-icon">&#128202;</div>
+              <div class="game-title">Percentage Predictor</div>
+              <div class="game-desc">Guess percentages within a 15% margin.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('blindRank')">
+              <div class="game-icon">&#128220;</div>
+              <div class="game-title">Blind Rank</div>
+              <div class="game-desc">Rank 5 surprise items step-by-step.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostStartDrafting('secretGuess')">
+              <div class="game-icon">&#128373;</div>
+              <div class="game-title">Mastermind</div>
+              <div class="game-desc">50 item secret target guess grid.</div>
+            </div>
           </div>
-          ${slotsHtml}
-        `;
-      } else {
-        return `<div style="padding:32px; text-align:center; background:rgba(0,255,136,0.15); color:var(--success); border:2px solid rgba(0,255,136,0.3); border-radius:24px; margin:24px 0; font-weight:900; font-size:22px;">✅ List Locked!</div>`;
-      }
-    },
-
-    renderActiveGame() {
-      const c = document.getElementById("main-content");
-      if (!c) return;
-      if (!this.activeGame) { this.renderLobby(); return; }
-
-      const isHost = this.isHost();
-      const streak = this.gameState.streak || 0;
-      const allAnswered = this.checkAllAnswered();
-      let body = "";
-      
-      if (!this.gameState.currentPrompt) {
-         body = this.getDraftingBody();
-      } else {
-         const cur = this.gameState.currentPrompt || { a: "A", b: "B" };
-         const myChoice = (this.gameState.choices && this.gameState.choices[this.myId]) ? this.gameState.choices[this.myId] : null;
-
-         if (this.activeGame === "blind-rank") {
-           body = `<div id="br-body">${this.getBlindRankBody()}</div>`;
-         } else if (this.activeGame === "secret-guess") {
-           body = `<div id="sg-body">${this.getSecretGuessBody()}</div>`;
-         } else {
-           switch (this.activeGame) {
-             case "would-rather":
-               body = `
-                 <h3 style="margin-bottom:20px; text-align:center; font-size:24px;">Would You Rather...</h3>
-                 <button class="btn-choice ${myChoice === cur.a ? "selected" : ""}" onclick="App.submitChoice('${esc(cur.a)}')">${esc(cur.a)}</button>
-                 <div class="divider">OR</div>
-                 <button class="btn-choice ${myChoice === cur.b ? "selected" : ""}" onclick="App.submitChoice('${esc(cur.b)}')">${esc(cur.b)}</button>
-               `;
-               break;
-             case "red-green-flag":
-               body = `
-                 <h3 style="text-align:center; font-size:24px;">Red or Green Flag?</h3>
-                 <div style="background:rgba(0,0,0,0.3); padding:32px 24px; border-radius:24px; text-align:center; margin:24px 0; border:2px solid rgba(255,255,255,0.1); box-shadow:inset 0 4px 15px rgba(0,0,0,0.5);">
-                   <p style="font-weight:900; font-size:22px; margin:0; color:#FFF; line-height:1.4;">"${esc(cur)}"</p>
-                 </div>
-                 <div style="display:flex; gap:16px;">
-                   <button style="flex:1; border-color:rgba(255,51,102,0.4); color:var(--danger);" class="btn-choice ${myChoice === 'Red Flag' ? 'selected' : ''}" onclick="App.submitChoice('Red Flag')">🚩 Red</button>
-                   <button style="flex:1; border-color:rgba(0,255,136,0.4); color:var(--success);" class="btn-choice ${myChoice === 'Green Flag' ? 'selected' : ''}" onclick="App.submitChoice('Green Flag')">🌿 Green</button>
-                 </div>
-               `;
-               break;
-             case "couple-compat":
-               const pKeys = Object.keys(this.gameState.players || {});
-               const name1 = pKeys.length > 0 ? this.gameState.players[pKeys[0]].name : "Player 1";
-               const name2 = pKeys.length > 1 ? this.gameState.players[pKeys[1]].name : "Waiting...";
-               body = `
-                 <h3 style="text-align:center; font-size:24px;">Who is more likely?</h3>
-                 <p style="font-weight:900;margin:16px 0 8px 0;font-size:24px;text-align:center;line-height:1.4;">${esc(cur)}</p>
-                 <div style="background:rgba(0, 229, 255, 0.15); border:1px solid rgba(0, 229, 255, 0.3); border-radius:16px; padding:16px; margin-bottom:24px; text-align:center;">
-                    <p style="font-weight:900; color:var(--secondary); font-size:14px; text-transform:uppercase; letter-spacing:1px; margin:0;">Win Condition: Consensus</p>
-                    <p style="font-weight:700; color:rgba(255,255,255,0.7); font-size:13px; margin-top:6px;">You only get a point if you both vote for the same person!</p>
-                 </div>
-                 <div style="display:flex; gap:16px;">
-                   <button style="flex:1; padding:32px 10px; font-size:18px; text-transform:uppercase;" class="btn-choice ${myChoice === name1 ? 'selected' : ''}" onclick="App.submitChoice('${esc(name1)}')">${esc(name1)}</button>
-                   <button style="flex:1; padding:32px 10px; font-size:18px; text-transform:uppercase;" class="btn-choice ${myChoice === name2 ? 'selected' : ''}" onclick="App.submitChoice('${esc(name2)}')">${esc(name2)}</button>
-                 </div>
-               `;
-               break;
-             case "mind-meld":
-               body = `
-                 <h3 style="text-align:center; font-size:24px;">Mind Meld 🧠</h3>
-                 <div style="background:var(--primary); color:white; padding:32px 24px; border-radius:24px; text-align:center; margin:24px 0; box-shadow:0 10px 30px rgba(255,46,147,0.3);">
-                   <p style="font-weight:900;font-size:24px;margin:0;">${esc(cur)}</p>
-                 </div>
-                 <div style="background:rgba(0, 229, 255, 0.15); border:1px solid rgba(0, 229, 255, 0.3); border-radius:16px; padding:16px; margin-bottom:24px; text-align:center;">
-                    <p style="font-weight:900; color:var(--secondary); font-size:14px; text-transform:uppercase; letter-spacing:1px; margin:0;">Win Condition: Exact Match</p>
-                    <p style="font-weight:700; color:rgba(255,255,255,0.7); font-size:13px; margin-top:6px;">Type the exact same word/phrase to win.</p>
-                 </div>
-                 <div style="display:flex; flex-direction:column; gap:16px;">
-                   <input type="text" id="meld-input" class="game-input" placeholder="Type your answer here..." style="text-align:center; font-size:20px; padding:20px;">
-                   <button class="btn-primary" onclick="App.submitChoice(document.getElementById('meld-input').value)">Lock Answer</button>
-                 </div>
-               `;
-               break;
-             case "percentage":
-               body = `
-                 <h3 style="text-align:center; font-size:24px;">The Vibe Slider</h3>
-                 <p style="font-weight:900;margin:16px 0 8px 0;font-size:22px;text-align:center;line-height:1.4;">${esc(cur)}</p>
-                 <div style="background:rgba(0, 229, 255, 0.15); border:1px solid rgba(0, 229, 255, 0.3); border-radius:16px; padding:16px; margin-bottom:16px; text-align:center;">
-                    <p style="font-weight:900; color:var(--secondary); font-size:14px; text-transform:uppercase; letter-spacing:1px; margin:0;">Win Condition: Margin of Error</p>
-                    <p style="font-weight:700; color:rgba(255,255,255,0.7); font-size:13px; margin-top:6px;">Match your partner within 15 points to win!</p>
-                 </div>
-                 <div class="slider-container">
-                   <input type="range" id="perc-slider" min="0" max="100" value="50" oninput="document.getElementById('perc-val').innerText = this.value + '%'">
-                   <div style="text-align:center; font-size:64px; font-weight:900; color:var(--secondary); margin:32px 0; text-shadow: 0 0 30px rgba(0,229,255,0.4);" id="perc-val">50%</div>
-                   <button class="btn-primary" onclick="App.submitChoice(document.getElementById('perc-slider').value)">Lock Rating</button>
-                 </div>
-               `;
-               break;
-           }
-         }
-      }
-
-      c.innerHTML = `
-        <div class="workspace-shell active-game-wrapper">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
-            ${isHost ? `<button class="btn-secondary" style="width:auto;padding:10px 20px;font-size:13px;border-radius:20px;" onclick="App.exitGame()">Exit Module</button>` : `<span class="badge badge-player">AWAITING HOST</span>`}
-            <span class="badge badge-streak">🔥 ${streak}</span>
-          </div>
-          
-          ${body}
-          <div class="comparison-container">
-            ${this.gameState.currentPrompt ? this.renderComparison() : ''}
-          </div>
-          
-          ${isHost && this.gameState.currentPrompt && allAnswered ? `
-            <button class="btn-primary" style="margin-top:36px; background:#FFF; color:#000; box-shadow:0 6px 0 #CCC;" onclick="App.launchGame('${this.activeGame}')">Next Round →</button>
-          ` : ``}
+        </div>
+      `;
+    } else {
+      html += `
+        <div style="margin-top:24px; text-align:center; padding:30px;" class="glass-card">
+          <div class="spinner" style="margin: 0 auto 16px auto;"></div>
+          <h3>Waiting for Host to Launch Game...</h3>
+          <p style="opacity:0.8; font-size:0.9rem; margin-top:8px;">The host is selecting from 11 game modes.</p>
         </div>
       `;
     }
-  };
 
-  const style = document.createElement('style');
-  style.innerHTML = `@keyframes pulse { 0% {opacity:0.4;} 50% {opacity:1;} 100% {opacity:0.4;} }`;
-  document.head.appendChild(style);
+    html += `</div>`;
+    container.innerHTML = html;
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => window.App.init());
-  else window.App.init();
-})();
+    const copyBtn = document.getElementById('btn-copy-link');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(shareUrl);
+        copyBtn.innerText = '&#10004; Link Copied!';
+        setTimeout(() => { copyBtn.innerText = '&#128203; Copy Direct Link'; }, 2000);
+      });
+    }
+  }
+
+  renderDrafting(container) {
+    if (this.isHost) {
+      container.innerHTML = `
+        <div class="glass-card animate-fade">
+          <span class="badge-pill">&#9997; HOST DRAFTING MODE</span>
+          <h2 style="margin-top:12px;">Draft Prompt or Roll Random</h2>
+          <p style="opacity:0.8; margin-bottom:20px;">Type a custom topic/word or auto-roll from content bank.</p>
+          <div style="margin-bottom:20px;">
+            <input type="text" id="custom-prompt-input" class="input-field" placeholder="Type custom topic/question..." style="margin-bottom:12px;"/>
+            <div style="display:flex; gap:12px;">
+              <button class="btn-primary" id="btn-submit-draft" style="flex:1;">Launch Custom Round</button>
+              <button class="btn-secondary" id="btn-roll-random" style="flex:1;">Auto-Roll Random</button>
+            </div>
+          </div>
+          <button class="btn-secondary" onclick="window.App.hostReturnToLobby()" style="width:100%;">Back to Lobby</button>
+        </div>
+      `;
+
+      document.getElementById('btn-submit-draft')?.addEventListener('click', () => {
+        const val = document.getElementById('custom-prompt-input').value.trim();
+        if (val) {
+          const gameType = this.roomData.game_type;
+          this.hostLaunchGame(gameType, { topic: val, prompt: val, target: val, question: val, scenario: val });
+        } else {
+          alert('Please enter a topic or click Auto-Roll.');
+        }
+      });
+
+      document.getElementById('btn-roll-random')?.addEventListener('click', () => {
+        const gameType = this.roomData.game_type;
+        this.hostLaunchGame(gameType);
+      });
+    } else {
+      container.innerHTML = `
+        <div class="glass-card animate-fade" style="text-align:center; padding:40px 20px;">
+          <div class="spinner" style="margin:0 auto 20px auto;"></div>
+          <h2>Host is Drafting Prompt...</h2>
+          <p style="opacity:0.8; margin-top:10px;">Get ready! The round will start as soon as host submits.</p>
+        </div>
+      `;
+    }
+  }
+
+  renderActiveGame(container) {
+    const prompt = this.roomData.current_prompt || {};
+    const gameType = this.roomData.game_type;
+    const choices = this.roomData.choices || {};
+    const myChoice = choices[this.myUid];
+    const players = this.roomData.players || [];
+    const partner = players.find(p => p.id !== this.myUid) || { name: 'Partner' };
+    const partnerHasChoice = partner.id && choices[partner.id] !== undefined;
+
+    let html = `
+      <div class="glass-card animate-fade">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <span class="badge-pill">&#128293; STREAK: ${this.roomData.streak || 0}</span>
+          <span class="badge-pill">ROUND ${this.roomData.round || 1}</span>
+        </div>
+
+        <div style="margin-bottom:20px; text-align:center;">
+          <h2 style="font-size:1.35rem; font-weight:800;">${prompt.question || prompt.topic || prompt.scenario || prompt.title || 'Answer the Question'}</h2>
+        </div>
+    `;
+
+    html += `
+      <div style="display:flex; gap:10px; margin-bottom:20px; justify-content:center;">
+        <div class="status-chip ${myChoice !== undefined ? 'ready' : 'waiting'}">
+          You: ${myChoice !== undefined ? '&#10004; Locked In' : 'Thinking...'}
+        </div>
+        <div class="status-chip ${partnerHasChoice ? 'ready' : 'waiting'}">
+          ${partner.name}: ${partnerHasChoice ? '&#10004; Locked In' : 'Thinking...'}
+        </div>
+      </div>
+    `;
+
+    if (myChoice !== undefined) {
+      html += `
+        <div style="text-align:center; padding:30px 10px;" class="glass-card">
+          <div class="spinner" style="margin:0 auto 16px auto;"></div>
+          <h3>Choice Locked In!</h3>
+          <p style="opacity:0.8; margin-top:8px;">Waiting for ${partner.name} to lock in their choice...</p>
+        </div>
+      `;
+    } else {
+      if (gameType === 'wouldRather' || gameType === 'bucketList') {
+        html += `
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <button class="btn-primary" onclick="window.App.submitChoice('Option A')" style="padding:18px; font-size:1.05rem;">
+              ${prompt.optionA}
+            </button>
+            <button class="btn-secondary" onclick="window.App.submitChoice('Option B')" style="padding:18px; font-size:1.05rem;">
+              ${prompt.optionB}
+            </button>
+          </div>
+        `;
+      } else if (gameType === 'redGreenFlag') {
+        html += `
+          <div style="display:flex; gap:16px; justify-content:center;">
+            <button class="btn-primary" onclick="window.App.submitChoice('GREEN FLAG')" style="flex:1; background:linear-gradient(135deg,#00E676,#00B0FF); padding:20px; font-size:1.1rem;">
+              &#128689; GREEN FLAG
+            </button>
+            <button class="btn-primary" onclick="window.App.submitChoice('RED FLAG')" style="flex:1; background:linear-gradient(135deg,#FF1744,#FF5252); padding:20px; font-size:1.1rem;">
+              &#128681; RED FLAG
+            </button>
+          </div>
+        `;
+      } else if (gameType === 'hotTakes') {
+        html += `
+          <div style="display:flex; gap:16px; justify-content:center;">
+            <button class="btn-primary" onclick="window.App.submitChoice('AGREE')" style="flex:1; background:linear-gradient(135deg,#00E676,#00B0FF); padding:20px; font-size:1.1rem;">
+              &#128077; AGREE
+            </button>
+            <button class="btn-primary" onclick="window.App.submitChoice('DISAGREE')" style="flex:1; background:linear-gradient(135deg,#FF1744,#FF5252); padding:20px; font-size:1.1rem;">
+              &#128078; DISAGREE
+            </button>
+          </div>
+        `;
+      } else if (gameType === 'truthOrDare') {
+        const mode = prompt.mode || 'TRUTH';
+        html += `
+          <div style="text-align:center;">
+            <div class="badge-pill" style="margin-bottom:14px; background:var(--primary); color:#fff;">${mode} MODE</div>
+            ${mode === 'TRUTH' ? `
+              <input type="text" id="truth-input" class="input-field" placeholder="Type your answer or live response..." style="margin-bottom:16px; text-align:center; font-size:1.1rem;"/>
+              <button class="btn-primary" id="btn-submit-truth" style="width:100%;">Lock In Truth Answer</button>
+            ` : `
+              <p style="opacity:0.9; margin-bottom:16px;">Perform the dare live or via voice note, then click complete!</p>
+              <button class="btn-primary" onclick="window.App.submitChoice('DARE COMPLETED!')" style="width:100%; padding:18px;">&#10004; I Completed the Dare!</button>
+            `}
+          </div>
+        `;
+      } else if (gameType === 'compatQuiz') {
+        const options = prompt.options || ["Me", "Partner", "Both", "Neither"];
+        html += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">`;
+        options.forEach(opt => {
+          let label = opt;
+          if (opt === 'Me') label = this.myName || 'Me';
+          if (opt === 'Partner') label = partner.name || 'Partner';
+
+          html += `
+            <button class="btn-secondary" onclick="window.App.submitChoice('${opt}')" style="padding:16px; font-size:1rem;">
+              ${label}
+            </button>
+          `;
+        });
+        html += `</div>`;
+      } else if (gameType === 'mindMeld') {
+        html += `
+          <div style="text-align:center;">
+            <input type="text" id="mindmeld-input" class="input-field" placeholder="Type your 1-word answer..." style="margin-bottom:16px; text-align:center; font-size:1.2rem;"/>
+            <button class="btn-primary" id="btn-submit-mindmeld" style="width:100%;">Lock In Word</button>
+          </div>
+        `;
+      } else if (gameType === 'vibeSlider' || gameType === 'percentage') {
+        html += `
+          <div style="text-align:center; padding:10px 0;">
+            <div id="slider-val-display" style="font-size:2.5rem; font-weight:900; margin-bottom:12px; color:var(--secondary);">50</div>
+            <input type="range" id="vibe-range" min="0" max="100" value="50" style="width:100%; margin-bottom:20px;" oninput="document.getElementById('slider-val-display').innerText = this.value;"/>
+            <button class="btn-primary" onclick="window.App.submitChoice(document.getElementById('vibe-range').value)" style="width:100%;">Lock In Value</button>
+          </div>
+        `;
+      } else if (gameType === 'secretGuess') {
+        const items = prompt.items || (window.Picker.get50Items ? window.Picker.get50Items() : []);
+        html += `<div class="options-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; max-height:340px; overflow-y:auto; padding:8px;">`;
+        items.forEach(item => {
+          html += `
+            <button class="btn-secondary" onclick="window.App.submitChoice('${item.replace(/'/g, "\\'")}')" style="padding:10px 4px; font-size:0.8rem; height: auto;">
+              ${item}
+            </button>
+          `;
+        });
+        html += `</div>`;
+      } else if (gameType === 'blindRank') {
+        const items = prompt.items || [];
+        const currentItem = items[this.blindRankStep] || 'Final Item';
+
+        html += `
+          <div style="text-align:center;">
+            <div class="badge-pill" style="margin-bottom:10px;">Item ${this.blindRankStep + 1} of 5</div>
+            <h3 style="font-size:1.3rem; margin-bottom:16px; color:var(--secondary);">${currentItem}</h3>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+        `;
+        for (let i = 0; i < 5; i++) {
+          const filled = this.blindRankSelections[i];
+          html += `
+            <button class="btn-secondary" ${filled ? 'disabled style="opacity:0.5;"' : `onclick="window.App.handleBlindRankSelect(${i}, '${currentItem.replace(/'/g, "\\'")}')"`} style="padding:12px; font-size:0.95rem;">
+              Slot ${i + 1}: ${filled || '[ Empty Slot ]'}
+            </button>
+          `;
+        }
+        html += `</div></div>`;
+      }
+    }
+
+    if (this.isHost) {
+      html += `
+        <div style="margin-top:24px; border-top:1px solid var(--border-glass); padding-top:16px; display:flex; gap:10px;">
+          <button class="btn-secondary" onclick="window.App.hostNextRound()" style="flex:1;">Skip Round</button>
+          <button class="btn-secondary" onclick="window.App.hostReturnToLobby()" style="flex:1;">Lobby</button>
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+    container.innerHTML = html;
+
+    const mmBtn = document.getElementById('btn-submit-mindmeld');
+    if (mmBtn) {
+      mmBtn.addEventListener('click', () => {
+        const val = document.getElementById('mindmeld-input').value.trim();
+        if (val) this.submitChoice(val);
+        else alert('Please enter a word!');
+      });
+    }
+
+    const truthBtn = document.getElementById('btn-submit-truth');
+    if (truthBtn) {
+      truthBtn.addEventListener('click', () => {
+        const val = document.getElementById('truth-input').value.trim() || 'Answered Live';
+        this.submitChoice(val);
+      });
+    }
+  }
+
+  handleBlindRankSelect(slotIdx, itemText) {
+    this.blindRankSelections[slotIdx] = itemText;
+    this.blindRankStep++;
+    if (this.blindRankStep >= 5) {
+      this.submitChoice(JSON.stringify(this.blindRankSelections));
+    } else {
+      this.renderScreen();
+    }
+  }
+
+  renderComparison(container) {
+    const prompt = this.roomData.current_prompt || {};
+    const gameType = this.roomData.game_type;
+    const choices = this.roomData.choices || {};
+    const players = this.roomData.players || [];
+
+    const p1 = players[0] || { id: this.myUid, name: this.myName || 'Player 1' };
+    const p2 = players[1] || { id: 'p2', name: 'Partner' };
+
+    const c1 = choices[p1.id];
+    const c2 = choices[p2.id];
+
+    let isMatch = false;
+    if (c1 !== undefined && c2 !== undefined) {
+      if (gameType === 'wouldRather' || gameType === 'redGreenFlag' || gameType === 'compatQuiz' || gameType === 'secretGuess' || gameType === 'hotTakes' || gameType === 'bucketList' || gameType === 'truthOrDare') {
+        isMatch = (String(c1).trim() === String(c2).trim());
+      } else if (gameType === 'mindMeld') {
+        isMatch = (String(c1).toLowerCase().trim() === String(c2).toLowerCase().trim());
+      } else if (gameType === 'vibeSlider' || gameType === 'percentage') {
+        isMatch = (Math.abs(Number(c1) - Number(c2)) <= 15);
+      } else if (gameType === 'blindRank') {
+        isMatch = (String(c1) === String(c2));
+      }
+    }
+
+    if (isMatch && window.confetti) {
+      window.confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    }
+
+    if (this.isHost) {
+      const currentStreak = this.roomData.streak || 0;
+      if (isMatch) {
+        this.updateStreak(currentStreak + 1);
+      } else {
+        this.updateStreak(0);
+      }
+    }
+
+    let html = `
+      <div class="glass-card animate-fade" style="text-align:center;">
+        <div class="match-box ${isMatch ? 'match-success' : 'match-fail'}" style="padding:20px; border-radius:16px; margin-bottom:20px; background: ${isMatch ? 'rgba(0, 230, 118, 0.15)' : 'rgba(255, 23, 68, 0.15)'}; border: 2px solid ${isMatch ? '#00E676' : '#FF1744'};">
+          <h1 style="font-size:1.8rem; margin-bottom:6px;">${isMatch ? '&#127881; PERFECT MATCH!' : '&#128148; NOT A MATCH'}</h1>
+          <p style="opacity:0.9;">${isMatch ? 'You two are on the exact same wavelength!' : 'Different vibes this time!'}</p>
+        </div>
+
+        <h3 style="margin-bottom:16px;">Revealed Answers</h3>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+          <div class="glass-card" style="padding:16px;">
+            <div style="font-size:0.85rem; opacity:0.8; margin-bottom:6px;">${p1.name}</div>
+            <div style="font-size:1.1rem; font-weight:800; color:var(--secondary);">${c1 !== undefined ? c1 : 'No answer'}</div>
+          </div>
+          <div class="glass-card" style="padding:16px;">
+            <div style="font-size:0.85rem; opacity:0.8; margin-bottom:6px;">${p2.name}</div>
+            <div style="font-size:1.1rem; font-weight:800; color:var(--primary);">${c2 !== undefined ? c2 : 'No answer'}</div>
+          </div>
+        </div>
+    `;
+
+    if (!isMatch && (this.roomData.streak >= 2)) {
+      const dare = window.Picker.nextItem('dares');
+      html += `
+        <div class="penalty-box" style="margin-bottom:24px; padding:18px; border-radius:14px; background:rgba(255, 46, 147, 0.2); border:1px solid var(--primary);">
+          <div class="badge-pill" style="background:var(--primary); color:#fff; margin-bottom:8px;">&#9888;&#65039; STREAK PENALTY DARE</div>
+          <p style="font-size:1rem; font-weight:700; color:#fff;">${dare.text || dare}</p>
+        </div>
+      `;
+    }
+
+    if (this.isHost) {
+      html += `
+        <div style="display:flex; gap:12px; margin-top:20px;">
+          <button class="btn-primary" onclick="window.App.hostNextRound()" style="flex:1;">Next Round &#10140;</button>
+          <button class="btn-secondary" onclick="window.App.hostReturnToLobby()" style="flex:1;">Change Game</button>
+        </div>
+      `;
+    } else {
+      html += `
+        <div style="margin-top:20px; text-align:center;">
+          <p style="opacity:0.8; font-size:0.9rem;">Waiting for host to start the next round...</p>
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+    container.innerHTML = html;
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  window.App = new DuoVibeApp();
+  window.App.init();
+});
