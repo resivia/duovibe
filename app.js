@@ -109,7 +109,49 @@ renderLobby(container){
  <div class="game-card" onclick="window.App.hostLaunchGame('vibeSlider')"><div class="game-icon">&#127914;</div><div class="game-title">Vibe Slider</div><div class="game-desc">Rate 0-100 intensity</div></div>
  <div class="game-card" onclick="window.App.hostLaunchGame('percentage')"><div class="game-icon">&#128202;</div><div class="game-title">Percentage Predictor</div><div class="game-desc">Guess % within 15%</div></div>
  <div class="game-card" onclick="window.App.hostLaunchGame('blindRank')"><div class="game-icon">&#128220;</div><div class="game-title">Blind Rank</div><div class="game-desc">Rank 5 surprise items</div></div>
- <div class="game-card" onclick="window.App.hostStartDrafting('secretGuess')"><div class="game-icon">&#128373;</div><div class="game-title">Mastermind</div><div class="game-desc">50 item secret guess</div></div>
+             <div class="game-card" onclick="window.App.hostLaunchGame('flashPoll')">
+              <div class="game-icon">📊</div>
+              <div class="game-title">Flash Poll</div>
+              <div class="game-desc">Quick polls for instant votes.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('wordStorm')">
+              <div class="game-icon">🌪️</div>
+              <div class="game-title">Word Storm</div>
+              <div class="game-desc">Type as many words as you can!</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('spyInTheCrowd')">
+              <div class="game-icon">🕵️</div>
+              <div class="game-title">Spy in the Crowd</div>
+              <div class="game-desc">Find the spy among us!</div>
+            </div>            <div class="game-card" onclick="window.App.hostLaunchGame('flashPoll')">
+              <div class="game-icon">📊</div>
+              <div class="game-title">Flash Poll</div>
+              <div class="game-desc">Quick polls for instant votes.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('wordStorm')">
+              <div class="game-icon">🌪️</div>
+              <div class="game-title">Word Storm</div>
+              <div class="game-desc">Type as many words as you can!</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('spyInTheCrowd')">
+              <div class="game-icon">🕵️</div>
+              <div class="game-title">Spy in the Crowd</div>
+              <div class="game-desc">Find the spy among us!</div>
+            </div>            <div class="game-card" onclick="window.App.hostLaunchGame('flashPoll')">
+              <div class="game-icon">📊</div>
+              <div class="game-title">Flash Poll</div>
+              <div class="game-desc">Quick polls for instant votes.</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('wordStorm')">
+              <div class="game-icon">🌪️</div>
+              <div class="game-title">Word Storm</div>
+              <div class="game-desc">Type as many words as you can!</div>
+            </div>
+            <div class="game-card" onclick="window.App.hostLaunchGame('spyInTheCrowd')">
+              <div class="game-icon">🕵️</div>
+              <div class="game-title">Spy in the Crowd</div>
+              <div class="game-desc">Find the spy among us!</div>
+            </div><div class="game-card" onclick="window.App.hostStartDrafting('secretGuess')"><div class="game-icon">&#128373;</div><div class="game-title">Mastermind</div><div class="game-desc">50 item secret guess</div></div>
  </div></div>`;
  } else {
  html+=`<div style="margin-top:24px;text-align:center;padding:30px;" class="glass-card"><div class="spinner" style="margin:0 auto 16px auto;"></div><h3>Waiting for Host...</h3><p style="opacity:0.8;font-size:0.9rem;margin-top:8px;">Host is picking from 11 games.</p></div>`;
