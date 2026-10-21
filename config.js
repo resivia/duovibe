@@ -1,3 +1,7 @@
-const SUPABASE_URL = "https://euqrzxxldlsbhuyjuleo.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1cXJ6eHhsZGxzYmh1eWp1bGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NTUzOTAsImV4cCI6MjA5MzIzMTM5MH0.J4zrhIzjIBkUmxHEPcaoxgoFudtAvXHmJaPToigR_ig";
-// Get this from Supabase Dashboard > Project Settings > API > anon public
+// DuoVibe Supabase Configuration - CORRECT PROJECT (sbalrqevmjeusmihaguo)
+window.SUPABASE_CONFIG = {
+  SUPABASE_URL: "https://sbalrqevmjeusmihaguo.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiYWxycWV2bWpldXNtaWhhZ3VvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk0NzY4MDAsImV4cCI6MjA0NTI0MjgwMH0.YOUR_ACTUAL_ANON_KEY_HERE"
+};
+const SUPABASE_URL = window.SUPABASE_CONFIG.SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.SUPABASE_CONFIG.SUPABASE_ANON_KEY;
