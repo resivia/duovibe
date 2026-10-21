@@ -1,4 +1,4 @@
-/* DuoVibe V8 - Stream & Extended Modes Overlay Engine */
+﻿/* DuoVibe V8 - Stream & Extended Modes Overlay Engine */
 (function() {
   function initOverlay() {
     if (typeof window.DuoVibeApp === 'undefined') {
@@ -15,10 +15,24 @@
       if (originalRenderLobby) originalRenderLobby.call(this, container);
 
       const grid = container.querySelector('.game-selector-grid') || container.querySelector('.grid') || container.querySelector('#game-list');
-      if (grid && !grid.querySelector('[data-game="flashPoll"]')) {
+      if (grid) {
         const extraCardsHtml = '<div class="game-card" data-game="flashPoll" onclick="window.App.hostLaunchGame(\'flashPoll\')"><div class="game-icon">&#9889;</div><div class="game-title">Flash Poll</div><div class="game-desc">Quick live polls.</div></div><div class="game-card" data-game="wordStorm" onclick="window.App.hostLaunchGame(\'wordStorm\')"><div class="game-icon">&#127786;&#65039;</div><div class="game-title">Word Storm</div><div class="game-desc">Type matching words.</div></div><div class="game-card" data-game="spyInTheCrowd" onclick="window.App.hostLaunchGame(\'spyInTheCrowd\')"><div class="game-icon">&#128373;</div><div class="game-title">Spy in the Crowd</div><div class="game-desc">Find the spy!</div></div>';
         grid.insertAdjacentHTML('beforeend', extraCardsHtml);
       }
+
+      // Keep exactly one card for each game.
+      const seenGames = new Set();
+      Array.from(grid.querySelectorAll('.game-card')).forEach(card => {
+        const onclick = card.getAttribute('onclick') || '';
+        const marker = "hostLaunchGame("; const start = onclick.indexOf(marker); const end = onclick.indexOf(")", start); const gameIdFromClick = start >= 0 && end > start ? onclick.slice(start + marker.length, end).replace(/["']+/g, "") : "";
+        const gameId = card.dataset.game || gameIdFromClick;
+        if (!gameId) return;
+        if (seenGames.has(gameId)) {
+          card.remove();
+        } else {
+          seenGames.add(gameId);
+        }
+      });
     };
 
     // 2. Enhanced hostLaunchGame Engine
@@ -26,19 +40,19 @@
     AppProto.hostLaunchGame = async function(gameType) {
       if (gameType === 'flashPoll') {
         const prompt = window.Picker ? window.Picker.nextItem('flashPoll') : null;
-        await this.updateRoomState({ game_type: 'flashPoll', state: 'ACTIVE', current_prompt: prompt, choices: {} });
+        await this.updateRoomState({ game_type: 'flashPoll', state: 'PLAYING', current_prompt: prompt, choices: {} });
       } else if (gameType === 'wordStorm') {
         const prompt = window.Picker ? window.Picker.nextItem('wordStorm') : null;
-        await this.updateRoomState({ game_type: 'wordStorm', state: 'ACTIVE', current_prompt: prompt, choices: {} });
+        await this.updateRoomState({ game_type: 'wordStorm', state: 'PLAYING', current_prompt: prompt, choices: {} });
       } else if (gameType === 'spyInTheCrowd' || gameType === 'spy') {
-        const pair = window.Picker ? window.Picker.nextItem('spyPairs') : null;
+        const pair = window.Picker ? window.Picker.nextItem('spyInTheCrowd') : null;
         const players = this.roomData.players || [];
         if (players.length === 0) { alert("Need at least 1 player!"); return; }
         const spyIndex = Math.floor(Math.random() * players.length);
         const spyPlayer = players[spyIndex];
         const assignments = {};
         players.forEach(function(p) { assignments[p.id] = (p.id === spyPlayer.id) ? pair.spyWord : pair.commonWord; });
-        await this.updateRoomState({ game_type: 'spyInTheCrowd', state: 'ACTIVE', current_prompt: { category: pair.category, spyId: spyPlayer.id, spyName: spyPlayer.name, commonWord: pair.commonWord, spyWord: pair.spyWord, assignments: assignments, stage: 'CLUES' }, choices: {} });
+        await this.updateRoomState({ game_type: 'spyInTheCrowd', state: 'PLAYING', current_prompt: { category: pair.category, spyId: spyPlayer.id, spyName: spyPlayer.name, commonWord: pair.commonWord, spyWord: pair.spyWord, assignments: assignments, stage: 'CLUES' }, choices: {} });
       } else if (originalHostLaunch) {
         await originalHostLaunch.call(this, gameType);
       }
@@ -49,7 +63,7 @@
       const gameType = this.roomData.game_type;
       const prompt = this.roomData.current_prompt || {};
       const choices = this.roomData.choices || {};
-      const myUid = this.getPersistentId();
+      const myUid = this.myUid;
       const isHost = (myUid === this.roomData.host_id);
       let html = '';
 
@@ -91,7 +105,7 @@
         if (gameType === 'spyInTheCrowd' && prompt.stage === 'CLUES') {
           html += '<button class="btn-primary" onclick="window.App.advanceSpyStage(\'VOTING\')" style="width:auto; padding:10px 18px;">Start Voting</button>';
         }
-        html += '<button class="btn-primary" onclick="window.App.forceRevealResults()" style="width:auto; padding:10px 18px; background:linear-gradient(135deg, #ff007f, #7928ca);">Force Reveal</button></div></div>';
+        html += '<button class="btn-primary" onclick="window.App.forceRevealResults()" style="width:auto; padding:10px 18px; background:linear-gradient(135deg, #ff007f, #7928ca);">Force Reveal</button>'; html += '<button class="btn-secondary" onclick="window.App.hostNextRound()" style="width:auto; padding:10px 18px;">Skip</button>'; html += '<button class="btn-secondary" onclick="window.App.hostReturnToLobby()" style="width:auto; padding:10px 18px;">Back to Lobby</button></div></div>';
       }
 
       container.innerHTML = html;
@@ -103,7 +117,7 @@
       const prompt = this.roomData.current_prompt || {};
       const choices = this.roomData.choices || {};
       const players = this.roomData.players || [];
-      const myUid = this.getPersistentId();
+      const myUid = this.myUid;
       const isHost = (myUid === this.roomData.host_id);
       let html = '<div class="glass-card" style="text-align:center; padding:20px;"><div class="status-chip">&#128202; Results</div><h2 style="margin:12px 0;">' + (prompt.question || prompt.category || 'Round Complete') + '</h2>';
 
@@ -130,7 +144,7 @@
       }
 
       if (isHost) {
-        html += '<div style="margin-top:24px;"><button class="btn-primary" onclick="window.App.nextRound()" style="width:100%; padding:14px;">Next Round</button></div>';
+        html += '<div style="margin-top:24px;display:flex;gap:10px;"><button class="btn-secondary" onclick="window.App.hostNextRound()" style="flex:1;">Skip</button><button class="btn-secondary" onclick="window.App.hostReturnToLobby()" style="flex:1;">Back to Lobby</button></div>';
       }
       html += '</div>';
       container.innerHTML = html;
@@ -174,3 +188,9 @@
   // Start initialization
   initOverlay();
 })();
+
+
+
+
+
+

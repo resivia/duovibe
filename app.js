@@ -76,7 +76,12 @@ async hostNextRound(){
  const updates={state:'PLAYING',round:(this.roomData.round||1)+1,current_prompt:prompt,choices:{},updated_at:new Date().toISOString()};
  const {data}=await sb.from('rooms').update(updates).eq('id',this.roomId).select().single();if(data){this.roomData=data;this.renderScreen();}
 }
-async hostReturnToLobby(){
+async updateRoomState(updates){
+ if(!this.isHost||!sb)return;
+ const {data,error}=await sb.from('rooms').update({...updates,updated_at:new Date().toISOString()}).eq('id',this.roomId).select().single();
+ if(error){console.error('Room update error:',error);return;}
+ if(data){this.roomData=data;this.renderScreen();}
+}async hostReturnToLobby(){
  if(!this.isHost||!sb)return;const updates={state:'LOBBY',game_type:null,current_prompt:null,choices:{},updated_at:new Date().toISOString()};
  const {data}=await sb.from('rooms').update(updates).eq('id',this.roomId).select().single();if(data){this.roomData=data;this.renderScreen();}
 }
@@ -92,7 +97,7 @@ renderScreen(){
  const state=this.roomData.state||'LOBBY';
  if(state==='LOBBY')this.renderLobby(gameView);
  else if(state==='DRAFTING')this.renderDrafting(gameView);
- else if(state==='PLAYING'){if(this.checkAllAnswered())this.renderComparison(gameView);else this.renderActiveGame(gameView);}
+ else if(state==='PLAYING'){if(this.checkAllAnswered())this.renderComparison(gameView);else this.renderActiveGame(gameView);} else if(state==='COMPARISON'){this.renderComparison(gameView);}
 }
 renderLobby(container){
  const players=this.roomData.players||[];const shareUrl=`${window.location.origin}${window.location.pathname}?room=${this.roomId}`;
@@ -221,4 +226,5 @@ renderComparison(container){
  html+=`</div>`;container.innerHTML=html;
 }
 }
+window.DuoVibeApp=DuoVibeApp;
 window.addEventListener('DOMContentLoaded',()=>{window.App=new DuoVibeApp();window.App.init();});
