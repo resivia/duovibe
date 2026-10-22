@@ -1,5 +1,11 @@
+# Netlify reads this file as well as netlify.toml; keep the two consistent.
 /*
-  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0
-  Pragma: no-cache
-  Expires: 0
-  Clear-Site-Data: "cache"
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/sw.js
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache

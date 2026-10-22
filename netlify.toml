@@ -1,19 +1,54 @@
 [build]
   publish = "."
 
+[build.environment]
+  NODE_VERSION = "20"
+
+# Netlify compresses text assets with brotli automatically. These headers
+# control how long the browser and the service worker trust each file.
 [[headers]]
   for = "/*"
   [headers.values]
-    Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
-    Pragma = "no-cache"
-    Expires = "0"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; base-uri 'self'; form-action 'self'"
+
+# The shell and the worker must always be revalidated, otherwise a deploy
+# can take a day to reach a returning visitor.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-cache"
 
 [[headers]]
-  for = "*.js"
+  for = "/index.html"
   [headers.values]
-    Cache-Control = "no-store, no-cache, must-revalidate"
+    Cache-Control = "no-cache"
 
 [[headers]]
-  for = "*.css"
+  for = "/sw.js"
   [headers.values]
-    Cache-Control = "no-store, no-cache, must-revalidate"
+    Cache-Control = "no-cache"
+
+# Everything else changes only when ?v= is bumped, so allow a short cache
+# and let ETag revalidation do the rest.
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, must-revalidate"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, must-revalidate"
+
+[[headers]]
+  for = "/icon-*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

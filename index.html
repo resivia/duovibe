@@ -2,40 +2,68 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#E8364E">
+<meta name="description" content="Real-time party games for long-distance couples and besties.">
 <title>DuoVibe Party Edition - LDR Games</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DuoVibe">
+
+<!-- Theme colour applied before first paint, so there is no white flash -->
+<style>html,body{margin:0;background:#2a1660 linear-gradient(125deg,#6a11cb 0%,#2575fc 25%,#ff2e93 60%,#00e5ff 100%);min-height:100dvh}</style>
+
+<!-- Fonts are non-blocking: text renders immediately in the system font -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=v8_ultra_fixed">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap" media="print" onload="this.media='all'">
+
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
-<div class="bg-orb orb1"></div><div class="bg-orb orb2"></div><div class="bg-orb orb3"></div>
 <div id="app-root">
   <div class="brand-header">
     <div class="brand-badge">&#128293; DUOVIBE</div>
     <div class="brand-sub">PARTY EDITION</div>
-    <div class="brand-tagline">Games for Long-Distance Couples & Besties &#10024;</div>
+    <div class="brand-tagline">Games for Long-Distance Couples &amp; Besties &#10024;</div>
   </div>
+
   <div id="landing-view" class="glass-card animate-fade">
     <h2 style="text-align:center;margin-bottom:6px;">Welcome Back!</h2>
-    <p style="text-align:center;opacity:0.8;font-size:0.9rem;margin-bottom:20px;">Create a room or join your partner - real-time sync, no refresh needed.</p>
-    <label style="font-size:0.85rem;opacity:0.8;">Your Display Name</label>
-    <input id="player-name-input" class="input-field" placeholder="e.g. Alex" maxlength="20" style="margin-bottom:14px;margin-top:6px;"/>
+    <p style="text-align:center;opacity:0.8;font-size:0.9rem;margin-bottom:20px;">Create a room or join your partner &mdash; real-time sync, no refresh needed.</p>
+
+    <label style="font-size:0.85rem;opacity:0.8;" for="player-name-input">Your Display Name</label>
+    <input id="player-name-input" class="input-field" placeholder="e.g. Alex" maxlength="20" autocomplete="nickname" style="margin-bottom:14px;margin-top:6px;"/>
+
     <button id="btn-create-room" class="btn-primary" style="width:100%;margin-bottom:14px;">&#10024; Create New Room</button>
+
     <div style="text-align:center;opacity:0.5;margin:10px 0;font-size:0.85rem;">OR</div>
+
     <div style="display:flex;gap:10px;">
-      <input id="join-room-code" class="input-field" placeholder="4-DIGIT CODE" maxlength="4" style="flex:1;text-transform:uppercase;text-align:center;letter-spacing:3px;font-weight:900;"/>
+      <input id="join-room-code" class="input-field" placeholder="4-DIGIT CODE" maxlength="4" inputmode="numeric" autocomplete="off" aria-label="Room code" style="flex:1;text-align:center;letter-spacing:3px;font-weight:900;"/>
       <button id="btn-join-room" class="btn-secondary" style="flex:1;">Join Room</button>
     </div>
-    <p style="margin-top:18px;font-size:0.72rem;opacity:0.55;text-align:center;">USA &#8644; Nigeria &#8226; HTTPS Polling 800ms &#8226; No Reload</p>
+
+    <p style="margin-top:18px;font-size:0.72rem;opacity:0.55;text-align:center;">USA &#8644; Nigeria &bull; Live sync &bull; No reload</p>
   </div>
+
   <div id="game-view" style="display:none;"></div>
 </div>
-<script src="config.js?v=v8"></script>
-<script src="banks.js?v=v8"></script>
-<script src="app.js?v=v8"></script>
-<script src="features.js?v=v8"></script>
+
+<script src="config.js?v=10"></script>
+<script src="supabase-lite.js?v=10"></script>
+<script src="banks.js?v=10"></script>
+<script src="app.js?v=10"></script>
+<script src="features.js?v=10"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
 </body>
 </html>

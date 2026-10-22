@@ -9,31 +9,7 @@
 
     const AppProto = window.DuoVibeApp.prototype;
 
-    // 1. Dynamic Lobby Card Injector
-    const originalRenderLobby = AppProto.renderLobby;
-    AppProto.renderLobby = function(container) {
-      if (originalRenderLobby) originalRenderLobby.call(this, container);
-
-      const grid = container.querySelector('.game-selector-grid') || container.querySelector('.grid') || container.querySelector('#game-list');
-      if (grid) {
-        const extraCardsHtml = '<div class="game-card" data-game="flashPoll" onclick="window.App.hostLaunchGame(\'flashPoll\')"><div class="game-icon">&#9889;</div><div class="game-title">Flash Poll</div><div class="game-desc">Quick live polls.</div></div><div class="game-card" data-game="wordStorm" onclick="window.App.hostLaunchGame(\'wordStorm\')"><div class="game-icon">&#127786;&#65039;</div><div class="game-title">Word Storm</div><div class="game-desc">Type matching words.</div></div><div class="game-card" data-game="spyInTheCrowd" onclick="window.App.hostLaunchGame(\'spyInTheCrowd\')"><div class="game-icon">&#128373;</div><div class="game-title">Spy in the Crowd</div><div class="game-desc">Find the spy!</div></div>';
-        grid.insertAdjacentHTML('beforeend', extraCardsHtml);
-      }
-
-      // Keep exactly one card for each game.
-      const seenGames = new Set();
-      Array.from(grid.querySelectorAll('.game-card')).forEach(card => {
-        const onclick = card.getAttribute('onclick') || '';
-        const marker = "hostLaunchGame("; const start = onclick.indexOf(marker); const end = onclick.indexOf(")", start); const gameIdFromClick = start >= 0 && end > start ? onclick.slice(start + marker.length, end).replace(/["']+/g, "") : "";
-        const gameId = card.dataset.game || gameIdFromClick;
-        if (!gameId) return;
-        if (seenGames.has(gameId)) {
-          card.remove();
-        } else {
-          seenGames.add(gameId);
-        }
-      });
-    };
+    // 1. Lobby cards are rendered by app.js (GAME_CARDS) - no DOM patching needed.
 
     // 2. Enhanced hostLaunchGame Engine
     const originalHostLaunch = AppProto.hostLaunchGame;
@@ -45,17 +21,39 @@
         const prompt = window.Picker ? window.Picker.nextItem('wordStorm') : null;
         await this.updateRoomState({ game_type: 'wordStorm', state: 'PLAYING', current_prompt: prompt, choices: {} });
       } else if (gameType === 'spyInTheCrowd' || gameType === 'spy') {
-        const pair = window.Picker ? window.Picker.nextItem('spyInTheCrowd') : null;
-        const players = this.roomData.players || [];
-        if (players.length === 0) { alert("Need at least 1 player!"); return; }
-        const spyIndex = Math.floor(Math.random() * players.length);
-        const spyPlayer = players[spyIndex];
-        const assignments = {};
-        players.forEach(function(p) { assignments[p.id] = (p.id === spyPlayer.id) ? pair.spyWord : pair.commonWord; });
-        await this.updateRoomState({ game_type: 'spyInTheCrowd', state: 'PLAYING', current_prompt: { category: pair.category, spyId: spyPlayer.id, spyName: spyPlayer.name, commonWord: pair.commonWord, spyWord: pair.spyWord, assignments: assignments, stage: 'CLUES' }, choices: {} });
+        const spyPrompt = this.buildSpyPrompt();
+        if (!spyPrompt) return;
+        await this.updateRoomState({ game_type: 'spyInTheCrowd', state: 'PLAYING', current_prompt: spyPrompt, choices: {} });
       } else if (originalHostLaunch) {
         await originalHostLaunch.call(this, gameType);
       }
+    };
+
+    // Build a complete spy round: secret assignments, spy id and stage.
+    // hostLaunchGame and hostNextRound both go through this, otherwise round 2+
+    // had no assignments (every player saw '???') and no spy to reveal.
+    AppProto.buildSpyPrompt = function() {
+      const pair = window.Picker ? window.Picker.nextItem('spyInTheCrowd') : null;
+      const players = this.roomData.players || [];
+      if (!pair) return null;
+      if (players.length === 0) { alert("Need at least 1 player!"); return null; }
+      const spyIndex = Math.floor(Math.random() * players.length);
+      const spyPlayer = players[spyIndex];
+      const assignments = {};
+      players.forEach(function(p) { assignments[p.id] = (p.id === spyPlayer.id) ? pair.spyWord : pair.commonWord; });
+      return { category: pair.category, spyId: spyPlayer.id, spyName: spyPlayer.name, commonWord: pair.commonWord, spyWord: pair.spyWord, assignments: assignments, stage: 'CLUES' };
+    };
+
+    const originalHostNextRound = AppProto.hostNextRound;
+    AppProto.hostNextRound = async function() {
+      const gameType = this.roomData ? this.roomData.game_type : null;
+      if ((gameType === 'spyInTheCrowd' || gameType === 'spy') && this.isHost) {
+        const prompt = this.buildSpyPrompt();
+        if (!prompt) return;
+        await this.updateRoomState({ state: 'PLAYING', round: (this.roomData.round || 1) + 1, current_prompt: prompt, choices: {} });
+        return;
+      }
+      if (originalHostNextRound) return originalHostNextRound.call(this);
     };
 
     // 3. Stream Game Renderer
@@ -139,7 +137,7 @@
         });
         html += '</div></div>';
       } else if (gameType === 'spyInTheCrowd' || gameType === 'spy') {
-        const spyPlayer = players.find(function(p) { return p.id === prompt.spyId; });
+        const spyPlayer = prompt.spyId ? players.find(function(p) { return p.id === prompt.spyId; }) : null;
         html += '<div class="glass-card" style="background:rgba(255,0,127,0.15); border:2px solid #ff007f; padding:16px; margin:16px 0;"><h3 style="color:#fff; margin-bottom:6px;">The Spy Was:</h3><div style="font-size:24px; font-weight:900; color:#00f2fe;">' + (spyPlayer ? spyPlayer.name : 'Unknown') + '</div><div style="margin-top:10px; font-size:14px; opacity:0.9;">Civilian: <b>' + prompt.commonWord + '</b> | Spy: <b>' + prompt.spyWord + '</b></div></div>';
       }
 

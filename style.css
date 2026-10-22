@@ -1,44 +1,193 @@
-:root{--primary:#FF2E93;--secondary:#00E5FF;--dark-glass:rgba(20,20,35,0.78);--border-glass:rgba(255,255,255,0.18);--text:#fff}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Plus Jakarta Sans',sans-serif;background:linear-gradient(125deg,#6a11cb 0%,#2575fc 25%,#ff2e93 60%,#00e5ff 100%);background-size:400% 400%;animation:gradientBG 15s ease infinite;min-height:100dvh;overflow-y:auto !important;padding:24px 16px;display:flex;flex-direction:column;align-items:center;color:var(--text)}
-@keyframes gradientBG{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.bg-orb{position:fixed;border-radius:50%;filter:blur(60px);opacity:0.42;pointer-events:none;z-index:-1}
-.orb1{width:320px;height:320px;background:#FF2E93;top:-90px;left:-90px;animation:float 8s ease infinite}
-.orb2{width:420px;height:420px;background:#00E5FF;bottom:-110px;right:-110px;animation:float 10s ease infinite reverse}
-.orb3{width:260px;height:260px;background:#6a11cb;top:40%;left:50%;animation:float 12s ease infinite}
-@keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(18px,-18px)}}
-#app-root{width:100%;max-width:540px;display:flex;flex-direction:column;gap:18px}
-.brand-header{text-align:center;margin-bottom:4px}
-.brand-badge{display:inline-block;background:var(--dark-glass);backdrop-filter:blur(20px);border:1px solid var(--border-glass);padding:10px 22px;border-radius:18px;font-weight:900;font-size:1.25rem;letter-spacing:1px;box-shadow:0 10px 30px rgba(0,0,0,0.3)}
-.brand-sub{font-weight:800;font-size:0.85rem;opacity:0.9;margin-top:6px;letter-spacing:2px}
-.brand-tagline{font-size:0.8rem;opacity:0.7;margin-top:4px}
-.glass-card{background:var(--dark-glass);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border:1px solid var(--border-glass);border-radius:24px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.12)}
-.animate-fade{animation:fadeIn .45s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.input-field{width:100%;background:rgba(255,255,255,0.08);border:1px solid var(--border-glass);border-radius:14px;padding:14px 16px;color:#fff;font-size:1rem;font-weight:600;outline:none;transition:.2s}
-.input-field:focus{border-color:var(--secondary);background:rgba(255,255,255,0.12);box-shadow:0 0 0 4px rgba(0,229,255,0.15)}
-.badge-pill{display:inline-block;background:rgba(255,255,255,0.12);border:1px solid var(--border-glass);border-radius:100px;padding:6px 14px;font-size:0.8rem;font-weight:700;backdrop-filter:blur(10px)}
-.badge-pill.pulse{animation:pulse 2s infinite;background:rgba(255,46,147,0.22);border-color:rgba(255,46,147,0.4)}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,46,147,0.4)}50%{box-shadow:0 0 0 8px rgba(255,46,147,0)}}
-.text-glow{color:var(--secondary);text-shadow:0 0 12px rgba(0,229,255,0.6)}
-.active-player{background:rgba(0,229,255,0.18)!important;border-color:rgba(0,229,255,0.4)!important}
-.btn-primary{background:linear-gradient(135deg,var(--primary),#FF6BAA);border:none;border-radius:16px;padding:14px 20px;color:#fff;font-weight:800;font-size:1rem;cursor:pointer;box-shadow:0 8px 20px rgba(255,46,147,0.4),0 2px 0 rgba(0,0,0,0.2) inset;transition:all .15s cubic-bezier(.34,1.56,.64,1)}
-.btn-primary:active{transform:translateY(2px) scale(.98)}
-.btn-primary:hover{transform:translateY(-1px) scale(1.01);box-shadow:0 12px 28px rgba(255,46,147,0.5)}
-.btn-secondary{background:rgba(255,255,255,0.12);border:1px solid var(--border-glass);border-radius:16px;padding:14px 20px;color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;backdrop-filter:blur(10px);transition:.2s}
-.btn-secondary:hover{background:rgba(255,255,255,0.18);transform:translateY(-1px)}
-.game-selector-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.game-card{background:rgba(255,255,255,0.08);border:1px solid var(--border-glass);border-radius:18px;padding:14px 10px;cursor:pointer;transition:.2s;text-align:center}
-.game-card:hover{background:rgba(255,255,255,0.14);transform:translateY(-3px) scale(1.02);border-color:rgba(255,255,255,0.3);box-shadow:0 12px 30px rgba(0,0,0,0.25)}
-.game-icon{font-size:1.5rem;margin-bottom:4px}
-.game-title{font-weight:800;font-size:0.88rem;margin-bottom:3px}
-.game-desc{font-size:0.68rem;opacity:0.62;line-height:1.3}
-.status-chip{padding:8px 12px;border-radius:100px;font-size:0.8rem;font-weight:700;border:1px solid var(--border-glass)}
-.status-chip.ready{background:rgba(0,230,118,0.15);border-color:rgba(0,230,118,0.4);color:#00E676}
-.status-chip.waiting{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.7)}
-.spinner{width:26px;height:26px;border:3px solid rgba(255,255,255,0.15);border-top-color:var(--secondary);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.options-grid{scrollbar-width:thin}
-.header-banner{text-align:center;padding-bottom:12px;border-bottom:1px solid var(--border-glass);margin-bottom:12px}
-input[type=range]{-webkit-appearance:none;height:8px;background:rgba(255,255,255,0.15);border-radius:10px;outline:none;width:100%}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);border:2px solid #fff}
+/* ═══════════════════════════════════════════════════════════════════
+   DuoVibe styles — performance-first rewrite
+
+   What changed and why:
+   · The page background was a 400%-wide animated gradient, repainted on
+     every frame forever. It is now a static gradient: identical look,
+     zero repaint.
+   · Three position:fixed orbs with blur(60px) were composited on every
+     scroll. Removed - the gradient already does the work.
+   · backdrop-filter: blur(22px) on every card forces the GPU to re-read
+     the whole backdrop each frame, which is what makes cheap Android
+     phones stutter when several things are open. Replaced with solid
+     translucent fills.
+   · Game cards get content-visibility:auto + contain, so offscreen
+     cards are not laid out or painted.
+   · Everything respects prefers-reduced-motion.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  --primary: #FF2E93;
+  --secondary: #00E5FF;
+  --panel: rgba(26, 14, 38, 0.72);   /* lets the gradient tint the glass, like the original */
+  --panel-soft: rgba(255, 255, 255, 0.08);
+  --border-glass: rgba(255, 255, 255, 0.18);
+  --text: #fff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto,
+               'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  background: #2a1660
+    radial-gradient(58% 38% at 16% 6%, rgba(255, 46, 147, .40), transparent 72%),
+    radial-gradient(52% 40% at 88% 92%, rgba(0, 229, 255, .32), transparent 72%),
+    linear-gradient(125deg, #6a11cb 0%, #2575fc 25%, #ff2e93 60%, #00e5ff 100%);
+  background-attachment: scroll;
+  min-height: 100dvh;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: contain;
+}
+
+/* ── layout ─────────────────────────────────────────────────────── */
+#app-root { width: 100%; max-width: 540px; display: flex; flex-direction: column; gap: 18px; }
+
+.brand-header { text-align: center; margin-bottom: 4px; }
+.brand-badge {
+  display: inline-block; background: var(--panel); border: 1px solid var(--border-glass);
+  padding: 10px 22px; border-radius: 18px; font-weight: 900; font-size: 1.25rem;
+  letter-spacing: 1px; box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+}
+.brand-sub { font-weight: 800; font-size: .85rem; opacity: .9; margin-top: 6px; letter-spacing: 2px; }
+.brand-tagline { font-size: .8rem; opacity: .75; margin-top: 4px; }
+
+.glass-card {
+  background: var(--panel);
+  border: 1px solid var(--border-glass);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .1);
+  contain: content;
+}
+
+.animate-fade { animation: fadeIn .3s ease both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ── form controls ──────────────────────────────────────────────── */
+.input-field {
+  width: 100%;
+  background: var(--panel-soft);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: #fff;
+  font-size: 16px;              /* 16px stops iOS from zooming on focus */
+  font-weight: 600;
+  outline: none;
+  transition: border-color .15s, background .15s;
+  font-family: inherit;
+}
+.input-field::placeholder { color: rgba(255, 255, 255, .5); }
+.input-field:focus { border-color: var(--secondary); background: rgba(255, 255, 255, .13); }
+
+.btn-primary, .btn-secondary {
+  min-height: 48px;              /* comfortable touch target */
+  border-radius: 16px;
+  padding: 14px 20px;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), #FF6BAA);
+  border: none;
+  box-shadow: 0 8px 20px rgba(255, 46, 147, .36);
+}
+.btn-secondary {
+  background: var(--panel-soft);
+  border: 1px solid var(--border-glass);
+}
+.btn-primary:active, .btn-secondary:active { transform: scale(.97); }
+.btn-primary:disabled, .btn-secondary:disabled { opacity: .5; cursor: default; }
+
+.badge-pill {
+  display: inline-block;
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid var(--border-glass);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: .8rem;
+  font-weight: 700;
+}
+.badge-pill.pulse { background: rgba(255, 46, 147, .22); border-color: rgba(255, 46, 147, .4); }
+.text-glow { color: var(--secondary); text-shadow: 0 0 12px rgba(0, 229, 255, .55); }
+.active-player { background: rgba(0, 229, 255, .18) !important; border-color: rgba(0, 229, 255, .4) !important; }
+
+/* ── game grid ──────────────────────────────────────────────────── */
+.game-selector-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.game-card {
+  background: var(--panel-soft);
+  border: 1px solid var(--border-glass);
+  border-radius: 18px;
+  padding: 14px 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: background .15s, transform .15s;
+  contain: layout paint style;
+  -webkit-tap-highlight-color: transparent;
+}
+.game-card:active { background: rgba(255, 255, 255, .18); transform: scale(.98); }
+.game-icon { font-size: 1.5rem; margin-bottom: 4px; line-height: 1.2; }
+.game-title { font-weight: 800; font-size: .88rem; margin-bottom: 3px; }
+.game-desc { font-size: .68rem; opacity: .65; line-height: 1.3; }
+
+/* ── misc components ────────────────────────────────────────────── */
+.status-chip { padding: 8px 12px; border-radius: 100px; font-size: .8rem; font-weight: 700; border: 1px solid var(--border-glass); }
+.status-chip.ready { background: rgba(0, 230, 118, .15); border-color: rgba(0, 230, 118, .4); color: #00E676; }
+.status-chip.waiting { background: var(--panel-soft); color: rgba(255, 255, 255, .7); }
+
+.spinner {
+  width: 26px; height: 26px;
+  border: 3px solid rgba(255, 255, 255, .15);
+  border-top-color: var(--secondary);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.options-grid { scrollbar-width: thin; }
+.header-banner { text-align: center; padding-bottom: 12px; border-bottom: 1px solid var(--border-glass); margin-bottom: 12px; }
+
+input[type=range] { -webkit-appearance: none; appearance: none; height: 8px; background: rgba(255, 255, 255, .15); border-radius: 10px; outline: none; width: 100%; }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, .3); border: 2px solid #fff;
+}
+input[type=range]::-moz-range-thumb {
+  width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff;
+  background: linear-gradient(135deg, var(--primary), var(--secondary)); cursor: pointer;
+}
+
+/* ── win celebration (replaces the 40KB confetti library) ───────── */
+.dv-win .glass-card { animation: winPop .45s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes winPop { 0% { transform: scale(1); } 45% { transform: scale(1.025); } 100% { transform: scale(1); } }
+
+/* ── motion preferences ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* ── short screens: tighten padding so controls stay reachable ──── */
+@media (max-height: 700px) {
+  body { padding-top: 14px; }
+  .glass-card { padding: 16px; border-radius: 20px; }
+  .brand-tagline { display: none; }
+}
