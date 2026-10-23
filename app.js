@@ -33,7 +33,9 @@ const GAME_CARDS = [
   { id: 'flashPoll', icon: '&#128202;', title: 'Flash Poll', desc: 'Quick polls for instant votes' },
   { id: 'wordStorm', icon: '&#127786;&#65039;', title: 'Word Storm', desc: 'Type as many words as you can' },
   { id: 'spyInTheCrowd', icon: '&#128373;', title: 'Spy in the Crowd', desc: 'Find the spy among us' },
-  { id: 'secretGuess', icon: '&#128373;', title: 'Mastermind', desc: '100 word secret guess', draft: true }
+  { id: 'secretGuess', icon: '&#128373;', title: 'Mastermind', desc: '100 word secret guess', draft: true },
+  { id: 'ageGuess', icon: '&#127874;', title: 'Guess My Age', desc: 'Lock a secret age, race to crack theirs' },
+  { id: 'numberGuess', icon: '&#128290;', title: 'Guess My Number', desc: 'Pick a number, deduce theirs first' }
 ];
 
 function gameCardsHtml() {
@@ -344,7 +346,11 @@ class DuoVibeApp {
     if (!this.isHost) return;
 
     let prompt = customPrompt;
-    if (!prompt) prompt = window.Picker ? window.Picker.nextItem(gameType) : { question: 'Default question' };
+    if (!prompt) {
+      prompt = (window.MiniGames && window.MiniGames.isMini(gameType))
+        ? window.MiniGames.buildPrompt(gameType, {})
+        : (window.Picker ? window.Picker.nextItem(gameType) : { question: 'Default question' });
+    }
 
     if (typeof prompt === 'string') {
       const v = prompt;
@@ -366,7 +372,9 @@ class DuoVibeApp {
   async hostNextRound() {
     if (!this.isHost) return;
     const gameType = this.roomData.game_type;
-    const prompt = window.Picker ? window.Picker.nextItem(gameType) : null;
+    const prompt = (window.MiniGames && window.MiniGames.isMini(gameType))
+      ? window.MiniGames.nextRoundPrompt(this, gameType)
+      : (window.Picker ? window.Picker.nextItem(gameType) : null);
     this.blindRankSelections = [null, null, null, null, null];
     this.blindRankStep = 0;
     await this.updateRoomState({
@@ -403,6 +411,11 @@ class DuoVibeApp {
     await db.from('rooms').update({ streak: newStreak }).eq('id', this.roomId);
   }
 
+_isMini(){return !!(window.MiniGames&&window.MiniGames.isMini(this.roomData&&this.roomData.game_type));}
+_renderMini(el){
+ if(this.roomData.state==='COMPARISON'&&window.MiniGames.renderForcedResult(this,el))return;
+ window.MiniGames.render(this,el);
+}
 checkAllAnswered(){
  if(!this.roomData||!this.roomData.choices)return false;const players=this.roomData.players||[];const choices=this.roomData.choices;const count=Object.keys(choices).length;
  if(players.length<=1)return count>=1;return count>=players.length;
@@ -417,13 +430,14 @@ renderScreen(){
  this._hash=sig;
  if(state==='LOBBY')this.renderLobby(gameView);
  else if(state==='DRAFTING')this.renderDrafting(gameView);
- else if(state==='PLAYING'){if(this.checkAllAnswered())this.renderComparison(gameView);else this.renderActiveGame(gameView);} else if(state==='COMPARISON'){this.renderComparison(gameView);}
+ else if(state==='PLAYING'){if(this._isMini())this._renderMini(gameView);else if(this.checkAllAnswered())this.renderComparison(gameView);else this.renderActiveGame(gameView);}
+ else if(state==='COMPARISON'){if(this._isMini())this._renderMini(gameView);else this.renderComparison(gameView);}
 }
 renderLobby(container){
  const players=this.roomData.players||[];const shareUrl=`${window.location.origin}${window.location.pathname}?room=${this.roomId}`;
  let html=`<div class="glass-card animate-fade"><div class="header-banner"><span class="badge-pill pulse">&#128308; LIVE LOBBY</span><h2 style="margin-top:8px;">Room: <span class="text-glow">${this.roomId}</span></h2><p style="font-size:0.9rem;opacity:0.8;">Share code with partner!</p><div style="margin-top:10px;"><button class="btn-secondary" id="btn-copy-link" style="padding:8px 16px;font-size:0.85rem;">&#128203; Copy Direct Link</button></div></div><div style="margin:20px 0;"><h4 style="margin-bottom:12px;font-size:1rem;opacity:0.9;">Connected (${players.length})</h4><div style="display:flex;gap:10px;flex-wrap:wrap;">${players.map(p=>`<div class="badge-pill ${p.id===this.myUid?'active-player':''}" style="padding:10px 16px;font-size:0.9rem;">${p.role==='host'?'&#128081;':'&#128104;&#8205;&#128187;'} ${esc(p.name)} ${p.id===this.myUid?'(You)':''}</div>`).join('')}</div></div>`;
  if(this.isHost){
-  html+=`<div style="margin-top:22px;"><h3 style="margin-bottom:12px;">Select Game (14 Modes)</h3><div class="game-selector-grid">
+  html+=`<div style="margin-top:22px;"><h3 style="margin-bottom:12px;">Select Game (16 Modes)</h3><div class="game-selector-grid">
   ${gameCardsHtml()}
   </div></div>`;
  } else {

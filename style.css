@@ -191,3 +191,111 @@ input[type=range]::-moz-range-thumb {
   .glass-card { padding: 16px; border-radius: 20px; }
   .brand-tagline { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Secret Duel games (Guess My Age / Guess My Number)
+
+   Same glass language as the rest of the app. No backdrop-filter, no
+   animated gradients, no box-shadows that repaint — a phone that
+   stutters on the lobby will not stutter here either.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.mg-wrap { padding: 20px; }
+
+.mg-top { display: flex; gap: 8px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.mg-pill-warn { background: rgba(255, 23, 68, .22); border-color: rgba(255, 23, 68, .45); color: #FF8A9B; }
+
+.mg-q { font-size: 1.34rem; font-weight: 900; text-align: center; line-height: 1.25; margin-bottom: 6px; }
+.mg-sub { text-align: center; font-size: .88rem; opacity: .75; margin-bottom: 16px; }
+
+.mg-range-badge { text-align: center; font-size: .9rem; opacity: .85; margin-bottom: 14px; }
+.mg-range-badge b { color: var(--secondary); }
+
+.mg-input { text-align: center; font-size: 1.9rem; font-weight: 900; letter-spacing: 2px; padding: 16px; }
+.mg-input::-webkit-outer-spin-button, .mg-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.mg-input[type=number] { -moz-appearance: textfield; }
+
+.mg-go { width: 100%; margin-top: 12px; padding: 16px; font-size: 1.02rem; }
+.mg-wide { width: 100%; margin-top: 14px; }
+.mg-note { font-size: .78rem; opacity: .65; text-align: center; margin-top: 12px; line-height: 1.5; }
+.mg-center { text-align: center; }
+
+.mg-locked-box { text-align: center; padding: 30px 10px; }
+.mg-locked-box h3 { margin-top: 14px; font-size: 1.1rem; }
+.mg-locked-box .spinner { margin: 0 auto; }
+
+/* race strip — the tension meter */
+.mg-race { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 12px; margin-bottom: 14px; border-radius: 16px; background: var(--panel-soft); border: 1px solid var(--border-glass); }
+.mg-race-side { display: flex; flex-direction: column; align-items: center; min-width: 72px; }
+.mg-race-num { font-size: 1.6rem; font-weight: 900; line-height: 1; }
+.mg-race-lab { font-size: .68rem; opacity: .7; margin-top: 3px; text-transform: uppercase; letter-spacing: .5px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mg-race-vs { font-size: .75rem; opacity: .5; font-weight: 800; }
+.mg-lead .mg-race-side:first-child .mg-race-num { color: #00E676; }
+
+.mg-alert { padding: 11px 14px; border-radius: 12px; background: rgba(255, 46, 147, .18); border: 1px solid rgba(255, 46, 147, .45); font-size: .84rem; font-weight: 700; text-align: center; margin-bottom: 14px; line-height: 1.45; }
+.mg-alert-good { background: rgba(0, 230, 118, .16); border-color: rgba(0, 230, 118, .45); }
+
+/* shrinking safe range */
+.mg-window { padding: 14px; border-radius: 16px; background: rgba(0, 229, 255, .07); border: 1px solid rgba(0, 229, 255, .28); margin-bottom: 16px; text-align: center; }
+.mg-window-lab { font-size: .68rem; text-transform: uppercase; letter-spacing: 1.2px; opacity: .65; font-weight: 800; }
+.mg-window-vals { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 1.75rem; font-weight: 900; color: var(--secondary); margin: 4px 0 8px; }
+.mg-window-dash { opacity: .45; font-size: 1.1rem; }
+.mg-window-bar { height: 6px; border-radius: 100px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+.mg-window-bar span { display: block; height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--secondary), var(--primary)); transition: width .25s ease; }
+.mg-window-note { font-size: .72rem; opacity: .7; margin-top: 7px; }
+
+/* probe history */
+.mg-history { max-height: 190px; overflow-y: auto; -webkit-overflow-scrolling: touch; margin-bottom: 14px; border-radius: 14px; }
+.mg-history-final { max-height: none; text-align: left; padding-top: 4px; }
+.mg-history-final .mg-window-lab { display: block; margin: 0 0 8px 2px; }
+.mg-empty { text-align: center; font-size: .82rem; opacity: .55; padding: 14px; }
+.mg-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 11px; background: var(--panel-soft); margin-bottom: 6px; font-size: .88rem; }
+.mg-row-i { font-size: .68rem; opacity: .5; width: 16px; font-weight: 800; flex: none; }
+.mg-row-v { font-weight: 900; font-size: 1rem; min-width: 42px; flex: none; }
+.mg-row-t { flex: 1; opacity: .8; font-size: .8rem; }
+.mg-row-hit { background: rgba(0, 230, 118, .18); border: 1px solid rgba(0, 230, 118, .45); }
+.mg-row-hit .mg-row-t { color: #00E676; font-weight: 800; opacity: 1; }
+.mg-heat { font-size: .8rem; flex: none; letter-spacing: -1px; }
+.mg-heat.bull { letter-spacing: 0; }
+.mg-heat.hot3, .mg-heat.hot2 { filter: saturate(1.2); }
+.mg-heat.cold { opacity: .55; }
+
+.mg-entry { display: flex; gap: 10px; align-items: stretch; }
+.mg-entry .mg-input { flex: 1; }
+.mg-entry .mg-go { width: auto; margin-top: 0; padding: 0 22px; font-size: .95rem; }
+
+.mg-done-good { text-align: center; padding: 14px; border-radius: 14px; background: rgba(0, 230, 118, .16); border: 1px solid rgba(0, 230, 118, .4); font-weight: 800; color: #00E676; }
+.mg-done-bad { text-align: center; padding: 14px; border-radius: 14px; background: rgba(255, 23, 68, .14); border: 1px solid rgba(255, 23, 68, .4); font-weight: 800; color: #FF8A9B; }
+
+.mg-hostbar { display: flex; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-glass); }
+.mg-hostbar button { flex: 1; }
+.mg-hostbar-main { border-top: none; }
+
+/* result */
+.mg-verdict { text-align: center; font-size: 1.24rem; font-weight: 900; padding: 16px; border-radius: 16px; margin-bottom: 16px; letter-spacing: .4px; }
+.mg-verdict.good { background: rgba(0, 230, 118, .16); border: 2px solid #00E676; }
+.mg-verdict.bad { background: rgba(255, 23, 68, .14); border: 2px solid #FF1744; }
+
+.mg-reveal { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.mg-reveal-card { padding: 14px 10px; border-radius: 14px; background: var(--panel-soft); border: 1px solid var(--border-glass); text-align: center; }
+.mg-reveal-name { font-size: .72rem; opacity: .75; margin-bottom: 6px; line-height: 1.3; }
+.mg-reveal-num { font-size: 2.1rem; font-weight: 900; line-height: 1; color: var(--primary); }
+.mg-reveal-num.accent { color: var(--secondary); }
+.mg-reveal-score { font-size: .72rem; opacity: .8; margin-top: 8px; line-height: 1.4; }
+.mg-reveal-score b { color: #00E676; }
+
+.mg-totals { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 14px; border-radius: 14px; background: var(--panel-soft); border: 1px solid var(--border-glass); margin-top: 4px; }
+.mg-totals > div { display: flex; flex-direction: column; align-items: center; }
+.mg-total-num { font-size: 1.7rem; font-weight: 900; color: var(--secondary); line-height: 1; }
+.mg-total-lab { font-size: .66rem; opacity: .7; text-transform: uppercase; letter-spacing: .6px; margin-top: 3px; max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mg-total-vs { opacity: .45; font-weight: 800; font-size: .9rem; }
+
+/* transient toast */
+.mg-flash { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 16px); background: rgba(20, 10, 30, .95); border: 1px solid var(--primary); color: #fff; padding: 11px 18px; border-radius: 100px; font-size: .84rem; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; z-index: 50; max-width: 88vw; text-align: center; }
+.mg-flash.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 380px) {
+  .mg-reveal { grid-template-columns: 1fr; }
+  .mg-q { font-size: 1.18rem; }
+  .mg-race-num { font-size: 1.4rem; }
+}
