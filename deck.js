@@ -18,6 +18,7 @@
 
   const STORE = 'duovibe_deck_v2';
   const SEEN_LIMIT = 80;
+  const KEEP_TAIL = 15;   /* items held back when a full pass wraps */
 
   function load() {
     try { return JSON.parse(localStorage.getItem(STORE)) || {}; }
@@ -75,11 +76,24 @@
       if (!avoidSeen) return idx;
 
       const db = load();
+      /* Remember how big this bank is, so the seen cap can never evict an
+         item the player has not met yet. */
+      db.size = db.size || {};
+      if (db.size[cat] !== length) { db.size[cat] = length; save(db); }
+
       const seen = (db.seen && db.seen[cat]) || [];
       if (!seen.length) return idx;
 
-      const fresh = idx.filter(i => seen.indexOf(i) === -1);
-      const stale = idx.filter(i => seen.indexOf(i) !== -1);
+      let fresh = idx.filter(i => seen.indexOf(i) === -1);
+      let stale = idx.filter(i => seen.indexOf(i) !== -1);
+
+      /* The bank has been served end to end: start a new pass, but hold
+         back the last few rounds so the wrap is not an instant repeat. */
+      if (!fresh.length) {
+        const keep = seen.slice(-KEEP_TAIL);
+        fresh = idx.filter(i => keep.indexOf(i) === -1);
+        stale = idx.filter(i => keep.indexOf(i) !== -1);
+      }
       return fresh.concat(stale);
     },
 
@@ -93,7 +107,9 @@
         if (at !== -1) list.splice(at, 1);
         list.push(i);
       });
-      while (list.length > SEEN_LIMIT) list.shift();
+      const bank = (db.size && db.size[cat]) || 0;
+      const cap = Math.max(SEEN_LIMIT, bank);
+      while (list.length > cap) list.shift();
       db.seen[cat] = list;
       save(db);
     },
