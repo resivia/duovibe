@@ -20,28 +20,30 @@ function esc(s) {
 }
 
 const GAME_CARDS = [
-  { id: 'wouldRather', icon: '&#129300;', title: 'Would You Rather', desc: 'Option A vs B consensus' },
-  { id: 'redGreenFlag', icon: '&#128681;', title: 'Red / Green Flag', desc: 'Dating LDR scenarios' },
-  { id: 'compatQuiz', icon: '&#128150;', title: 'Compatibility Quiz', desc: 'Who knows who best' },
-  { id: 'hotTakes', icon: '&#128293;', title: 'Hot Takes Radar', desc: 'Agree vs Disagree debate' },
-  { id: 'bucketList', icon: '&#9992;&#65039;', title: 'LDR Bucket List', desc: 'Match reunion ideas' },
-  { id: 'truthOrDare', icon: '&#127917;', title: 'Truth or Dare', desc: 'LDR truths & dares' },
-  { id: 'mindMeld', icon: '&#129504;', title: 'Mind Meld', desc: 'Exact word match', draft: true },
-  { id: 'vibeSlider', icon: '&#127914;', title: 'Vibe Slider', desc: 'Rate 0-100 intensity' },
-  { id: 'percentage', icon: '&#128202;', title: 'Percentage Predictor', desc: 'Guess % within 15%' },
-  { id: 'blindRank', icon: '&#128220;', title: 'Blind Rank', desc: 'Rank 5 surprise items' },
-  { id: 'flashPoll', icon: '&#128202;', title: 'Flash Poll', desc: 'Quick polls for instant votes' },
-  { id: 'wordStorm', icon: '&#127786;&#65039;', title: 'Word Storm', desc: 'Type as many words as you can' },
-  { id: 'spyInTheCrowd', icon: '&#128373;', title: 'Spy in the Crowd', desc: 'Find the spy among us' },
-  { id: 'secretGuess', icon: '&#128373;', title: 'Mastermind', desc: '100 word secret guess', draft: true },
-  { id: 'ageGuess', icon: '&#127874;', title: 'Guess My Age', desc: 'Lock a secret age, race to crack theirs' },
-  { id: 'numberGuess', icon: '&#128290;', title: 'Guess My Number', desc: 'Pick a number, deduce theirs first' }
+  { id: 'wouldRather',   title: 'Would You Rather',    desc: 'Option A vs B' },
+  { id: 'truthOrDare',   title: 'Truth or Dare',       desc: 'LDR truths & dares' },
+  { id: 'mindMeld',      title: 'Mind Meld',           desc: 'Exact word match' },
+  { id: 'percentage',    title: 'Percentage Predictor', desc: 'Guess within 15%' },
+  { id: 'blindRank',     title: 'Blind Rank',          desc: 'Rank 5 unknown items' },
+  { id: 'flashPoll',     title: 'Flash Poll',          desc: 'Quick instant votes' },
+  { id: 'wordStorm',     title: 'Word Storm',          desc: 'Type against the clock' },
+  { id: 'spyInTheCrowd', title: 'Spy in the Crowd',    desc: 'Find the impostor' },
+  { id: 'secretGuess',   title: 'Mastermind',          desc: 'Guess the secret word' },
+  { id: 'ageGuess',      title: 'Guess My Age',        desc: 'Lock an age, crack theirs' },
+  { id: 'numberGuess',   title: 'Guess My Number',     desc: 'Deduce the number first' },
+  { id: 'twoTruths',     title: 'Two Truths & a Lie',  desc: 'Write the bait, hunt theirs' },
+  { id: 'emojiClue',     title: 'Emoji Charades',      desc: 'Five emoji. That is it.' },
+  { id: 'speedRound',    title: 'Speed Round',         desc: '20 calls, 60 seconds' },
+  { id: 'hotSeat',       title: 'Hot Seat',            desc: 'Predict their answers' },
+  { id: 'mostLikely',    title: "Who's Most Likely",   desc: 'Point at the guilty one' },
+  { id: 'nhie',          title: 'Never Have I Ever',   desc: 'Confess, then compare' }
 ];
 
 function gameCardsHtml() {
   return GAME_CARDS.map(g =>
     `<div class="game-card" data-game="${g.id}" onclick="window.App.${g.draft ? 'hostStartDrafting' : 'hostLaunchGame'}('${g.id}')">` +
-    `<div class="game-icon">${g.icon}</div><div class="game-title">${g.title}</div><div class="game-desc">${g.desc}</div></div>`
+    `<div class="game-icon">${window.Icons ? window.Icons.svg(g.id, 26) : ''}</div>` +
+    `<div class="game-title">${g.title}</div><div class="game-desc">${g.desc}</div></div>`
   ).join('');
 }
 
@@ -49,6 +51,8 @@ class DuoVibeApp {
   constructor() {
     this.myUid = '';
     this.myName = localStorage.getItem('duovibe_name') || '';
+    this.myAvatar = localStorage.getItem('duovibe_avatar') || '';
+
     this.roomId = null;
     this.isHost = false;
     this.roomData = null;
@@ -110,11 +114,81 @@ class DuoVibeApp {
         localStorage.setItem('duovibe_name', this.myName);
       });
     }
+    this.renderAvatarPicker();
+    const avShuffle = document.getElementById('btn-av-shuffle');
+    if (avShuffle) avShuffle.addEventListener('click', () => {
+      const set = (window.Avatars ? window.Avatars.set : []);
+      if (!set.length) return;
+      let pick = set[Math.floor(Math.random() * set.length)];
+      if (pick === this.myAvatar && set.length > 1) pick = set[(set.indexOf(pick) + 1) % set.length];
+      this.setMyAvatar(pick);
+    });
+
     if (createBtn) createBtn.addEventListener('click', () => this.handleCreateRoom());
     if (joinBtn) joinBtn.addEventListener('click', () => this.handleJoinRoom());
 
     const joinCode = document.getElementById('join-room-code');
     if (joinCode) joinCode.addEventListener('keydown', e => { if (e.key === 'Enter') this.handleJoinRoom(); });
+  }
+
+  /* ── avatar ───────────────────────────────────────────────────── */
+
+  myEmoji() {
+    if (this.myAvatar) return this.myAvatar;
+    if (window.Avatars) return window.Avatars.fallback(this.myName || this.myUid || 'duovibe');
+    return '🙂';
+  }
+
+  setMyAvatar(emoji) {
+    if (!emoji) return;
+    this.myAvatar = emoji;
+    try { localStorage.setItem('duovibe_avatar', emoji); } catch (e) {}
+    this.renderAvatarPicker();
+    if (this.roomId) {
+      this._pushAvatarToRoom(emoji);
+      this._hash = '';
+      this.renderScreen();
+    }
+  }
+
+  renderAvatarPicker() {
+    const box = document.getElementById('avatar-picker');
+    if (!box || !window.Avatars) return;
+    const cur = this.myEmoji();
+    box.innerHTML = window.Avatars.set.map(a =>
+      '<button type="button" class="av-opt' + (a === cur ? ' on' : '') + '" data-av="' + a + '">' + a + '</button>'
+    ).join('');
+    box.querySelectorAll('.av-opt').forEach(b => {
+      b.addEventListener('click', () => this.setMyAvatar(b.dataset.av));
+    });
+  }
+
+  /* dv_create_room / dv_join_room build the players JSON server-side and
+     do not know about emoji, so we patch our own entry right after the
+     room exists. One extra PATCH, and the avatar survives every later
+     read because players is written back verbatim. */
+  async _ensureAvatar() {
+    if (!this.roomId || !this.roomData) return;
+    const players = this.roomData.players || [];
+    const me = players.find(p => p.id === this.myUid);
+    if (!me) return;
+    const mine = this.myEmoji();
+    if (me.emoji === mine) return;
+    await this._pushAvatarToRoom(mine);
+  }
+
+  /* Write our emoji into the room's players array (read-modify-write,
+     same pattern as the join fallback). */
+  async _pushAvatarToRoom(emoji) {
+    if (!this.roomId) return;
+    const players = (this.roomData && this.roomData.players ? this.roomData.players.slice() : []);
+    const at = players.findIndex(p => p.id === this.myUid);
+    if (at < 0) return;
+    if (players[at].emoji === emoji) return;
+    players[at].emoji = emoji;
+    this.roomData = Object.assign({}, this.roomData, { players: players });
+    const upd = await db.from('rooms').update({ players: players }).eq('id', this.roomId);
+    if (upd && upd.error) console.warn('[DuoVibe] avatar save failed', upd.error.message);
   }
 
   /* ── room lifecycle ───────────────────────────────────────────── */
@@ -139,7 +213,7 @@ class DuoVibeApp {
         const code = this.generateRoomCode();
         const res = await db.from('rooms').insert([{
           id: code, host_id: this.myUid, host_name: name,
-          players: [{ id: this.myUid, name: name, role: 'host' }],
+          players: [{ id: this.myUid, name: name, role: 'host', emoji: this.myEmoji() }],
           state: 'LOBBY', game_type: null, current_prompt: null,
           choices: {}, streak: 0, round: 1
         }]).select().single();
@@ -157,6 +231,7 @@ class DuoVibeApp {
     this.isHost = true;
     this.roomData = room;
     this._hash = '';
+    await this._ensureAvatar();
     this.startPolling();
     this.renderScreen();
   }
@@ -184,7 +259,7 @@ class DuoVibeApp {
       const players = res.data.players || [];
       const at = players.findIndex(p => p.id === this.myUid);
       if (at >= 0) players[at].name = name;
-      else players.push({ id: this.myUid, name: name, role: 'player' });
+      else players.push({ id: this.myUid, name: name, role: 'player', emoji: this.myEmoji() });
       const upd = await db.from('rooms').update({ players }).eq('id', code).select().single();
       room = upd.data || res.data;
     }
@@ -193,6 +268,7 @@ class DuoVibeApp {
     this.isHost = (room.host_id === this.myUid);
     this.roomData = room;
     this._hash = '';
+    await this._ensureAvatar();
     this.startPolling();
     this.renderScreen();
   }
@@ -215,6 +291,7 @@ class DuoVibeApp {
     this.isHost = false;
     this._hash = '';
 
+    document.body.classList.remove('in-game');
     const landing = document.getElementById('landing-view');
     const gameView = document.getElementById('game-view');
     if (landing) landing.style.display = 'block';
@@ -308,8 +385,19 @@ class DuoVibeApp {
 
   /* ── gameplay writes ──────────────────────────────────────────── */
 
+  /* A short tick on lock-in. Silently does nothing on iOS Safari and
+     respects the system "reduce motion" preference. */
+  _tick() {
+    try {
+      if (navigator.vibrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        navigator.vibrate(12);
+      }
+    } catch (e) {}
+  }
+
   async submitChoice(choiceValue) {
     if (!this.roomId) return;
+    this._tick();
     this._optimisticChoice(choiceValue);
 
     /* Atomic server-side write: no read-modify-write race with the partner */
@@ -349,7 +437,11 @@ class DuoVibeApp {
     if (!prompt) {
       prompt = (window.MiniGames && window.MiniGames.isMini(gameType))
         ? window.MiniGames.buildPrompt(gameType, {})
-        : (window.Picker ? window.Picker.nextItem(gameType) : { question: 'Default question' });
+        : (window.PartyGames && window.PartyGames.isParty(gameType))
+          ? window.PartyGames.buildPrompt(gameType, this.roomData.players || [], {})
+          : (window.SocialGames && window.SocialGames.isSocial(gameType))
+            ? window.SocialGames.buildPrompt(gameType, this.roomData.players || [], {}, this.roomId)
+            : (window.Picker ? window.Picker.nextItem(gameType, this.roomId) : { question: 'Default question' });
     }
 
     if (typeof prompt === 'string') {
@@ -374,7 +466,11 @@ class DuoVibeApp {
     const gameType = this.roomData.game_type;
     const prompt = (window.MiniGames && window.MiniGames.isMini(gameType))
       ? window.MiniGames.nextRoundPrompt(this, gameType)
-      : (window.Picker ? window.Picker.nextItem(gameType) : null);
+      : (window.PartyGames && window.PartyGames.isParty(gameType))
+        ? window.PartyGames.nextRoundPrompt(this, gameType)
+        : (window.SocialGames && window.SocialGames.isSocial(gameType))
+          ? window.SocialGames.nextRoundPrompt(this, gameType)
+          : (window.Picker ? window.Picker.nextItem(gameType, this.roomId) : null);
     this.blindRankSelections = [null, null, null, null, null];
     this.blindRankStep = 0;
     await this.updateRoomState({
@@ -412,6 +508,8 @@ class DuoVibeApp {
   }
 
 _isMini(){return !!(window.MiniGames&&window.MiniGames.isMini(this.roomData&&this.roomData.game_type));}
+_isParty(){return !!(window.PartyGames&&window.PartyGames.isParty(this.roomData&&this.roomData.game_type));}
+_isSocial(){return !!(window.SocialGames&&window.SocialGames.isSocial(this.roomData&&this.roomData.game_type));}
 _renderMini(el){
  if(this.roomData.state==='COMPARISON'&&window.MiniGames.renderForcedResult(this,el))return;
  window.MiniGames.render(this,el);
@@ -422,95 +520,245 @@ checkAllAnswered(){
 }
 renderScreen(){
  const landing=document.getElementById('landing-view');const gameView=document.getElementById('game-view');
- if(!this.roomId||!this.roomData){if(landing)landing.style.display='block';if(gameView)gameView.style.display='none';return;}
+ if(!this.roomId||!this.roomData){document.body.classList.remove('in-game');if(landing)landing.style.display='block';if(gameView)gameView.style.display='none';return;}
  if(landing)landing.style.display='none';if(gameView)gameView.style.display='block';
+ document.body.classList.add('in-game');
  const state=this.roomData.state||'LOBBY';
  const sig=JSON.stringify([state,this.roomData.game_type,this.roomData.round,this.roomData.current_prompt,this.roomData.choices,(this.roomData.players||[]).map(p=>p.id+'~'+p.name).join('|'),this.roomData.streak,this.blindRankStep,this.blindRankSelections]);
  if(sig===this._hash)return;
  this._hash=sig;
  if(state==='LOBBY')this.renderLobby(gameView);
  else if(state==='DRAFTING')this.renderDrafting(gameView);
- else if(state==='PLAYING'){if(this._isMini())this._renderMini(gameView);else if(this.checkAllAnswered())this.renderComparison(gameView);else this.renderActiveGame(gameView);}
- else if(state==='COMPARISON'){if(this._isMini())this._renderMini(gameView);else this.renderComparison(gameView);}
+ else if(state==='PLAYING'){if(this._isMini())this._renderMini(gameView);else if(this._isParty())window.PartyGames.render(this,gameView);else if(this._isSocial())window.SocialGames.render(this,gameView);else if(this.checkAllAnswered())this.renderComparison(gameView);else this.renderActiveGame(gameView);}
+ else if(state==='COMPARISON'){if(this._isMini())this._renderMini(gameView);else if(this._isParty())window.PartyGames.render(this,gameView);else if(this._isSocial())window.SocialGames.render(this,gameView);else this.renderComparison(gameView);}
 }
 renderLobby(container){
- const players=this.roomData.players||[];const shareUrl=`${window.location.origin}${window.location.pathname}?room=${this.roomId}`;
- let html=`<div class="glass-card animate-fade"><div class="header-banner"><span class="badge-pill pulse">&#128308; LIVE LOBBY</span><h2 style="margin-top:8px;">Room: <span class="text-glow">${this.roomId}</span></h2><p style="font-size:0.9rem;opacity:0.8;">Share code with partner!</p><div style="margin-top:10px;"><button class="btn-secondary" id="btn-copy-link" style="padding:8px 16px;font-size:0.85rem;">&#128203; Copy Direct Link</button></div></div><div style="margin:20px 0;"><h4 style="margin-bottom:12px;font-size:1rem;opacity:0.9;">Connected (${players.length})</h4><div style="display:flex;gap:10px;flex-wrap:wrap;">${players.map(p=>`<div class="badge-pill ${p.id===this.myUid?'active-player':''}" style="padding:10px 16px;font-size:0.9rem;">${p.role==='host'?'&#128081;':'&#128104;&#8205;&#128187;'} ${esc(p.name)} ${p.id===this.myUid?'(You)':''}</div>`).join('')}</div></div>`;
- if(this.isHost){
-  html+=`<div style="margin-top:22px;"><h3 style="margin-bottom:12px;">Select Game (16 Modes)</h3><div class="game-selector-grid">
-  ${gameCardsHtml()}
-  </div></div>`;
- } else {
- html+=`<div style="margin-top:24px;text-align:center;padding:30px;" class="glass-card"><div class="spinner" style="margin:0 auto 16px auto;"></div><h3>Waiting for Host...</h3><p style="opacity:0.8;font-size:0.9rem;margin-top:8px;">Host is picking from the games list.</p></div>`;
- }
- html+=`<div style="margin-top:18px;text-align:center;"><button class="btn-secondary" onclick="window.App.leaveRoom()" style="padding:10px 18px;font-size:0.85rem;opacity:0.85;">Leave Room</button></div></div>`;container.innerHTML=html;
- const copyBtn=document.getElementById('btn-copy-link');if(copyBtn){copyBtn.addEventListener('click',()=>{navigator.clipboard.writeText(shareUrl);copyBtn.innerText='&#10004; Copied!';setTimeout(()=>copyBtn.innerText='&#128203; Copy Direct Link',2000);});}
+  const players=this.roomData.players||[];
+  const shareUrl=`${window.location.origin}${window.location.pathname}?room=${this.roomId}`;
+  let html='<div class="glass-card animate-fade lb">';
+  html+='<div class="lb-head"><span class="badge-pill pulse">🔴 LIVE LOBBY</span>'
+    +'<h2 class="lb-code">Room <span>'+this.roomId+'</span></h2>'
+    +'<p class="lb-hint">Send this code to your partner</p>'
+    +'<button class="btn-secondary lb-copy" id="btn-copy-link">Copy invite link</button></div>';
+  html+='<div class="lb-players"><h3 class="lb-sub">Connected ('+players.length+')</h3><div class="lb-chips">'
+    +players.map(p=>'<div class="badge-pill lb-chip '+(p.id===this.myUid?'active-player':'')+'">'
+      +(window.Avatars?window.Avatars.html(p.emoji):'')+'<span>'+esc(p.name)+(p.id===this.myUid?' (you)':'')+'</span>'
+      +(p.role==='host'?'<span class="lb-crown">👑</span>':'')+'</div>').join('')
+    +'</div></div>';
+  if(this.isHost){
+    html+='<div class="lb-games"><h3 class="lb-sub">Pick a game</h3><div class="game-selector-grid">'+gameCardsHtml()+'</div></div>';
+  }else{
+    html+='<div class="lb-wait"><div class="spinner"></div><h3>Waiting for the host</h3>'
+      +'<p class="gv-note">They are picking a game.</p></div>';
+  }
+  html+='<div class="lb-foot"><button class="btn-secondary" onclick="window.App.leaveRoom()">Leave room</button></div>';
+  html+='</div>';
+  container.innerHTML=html;
+  const copyBtn=document.getElementById('btn-copy-link');
+  if(copyBtn){copyBtn.addEventListener('click',()=>{navigator.clipboard.writeText(shareUrl);copyBtn.innerText='✓ Copied';setTimeout(()=>copyBtn.innerText='Copy invite link',2000);});}
 }
 renderDrafting(container){
- if(this.isHost){
- container.innerHTML=`<div class="glass-card animate-fade"><span class="badge-pill">&#9997; HOST DRAFTING</span><h2 style="margin-top:12px;">Draft Custom Prompt</h2><p style="opacity:0.8;margin-bottom:20px;">Type custom topic or roll random from bank.</p><div style="margin-bottom:20px;"><input type="text" id="custom-prompt-input" class="input-field" placeholder="Type custom topic/question..." style="margin-bottom:12px;"/><div style="display:flex;gap:12px;"><button class="btn-primary" id="btn-submit-draft" style="flex:1;">Launch Custom</button><button class="btn-secondary" id="btn-roll-random" style="flex:1;">Auto-Roll Random</button></div></div><button class="btn-secondary" onclick="window.App.hostReturnToLobby()" style="width:100%;">Back to Lobby</button></div>`;
- document.getElementById('btn-submit-draft')?.addEventListener('click',()=>{const val=document.getElementById('custom-prompt-input').value.trim();if(val){this.hostLaunchGame(this.roomData.game_type,val);}else{alert('Enter topic or roll random');}});
- document.getElementById('btn-roll-random')?.addEventListener('click',()=>{this.hostLaunchGame(this.roomData.game_type);});
- } else {
- container.innerHTML=`<div class="glass-card animate-fade" style="text-align:center;padding:40px 20px;"><div class="spinner" style="margin:0 auto 20px auto;"></div><h2>Host is Drafting...</h2><p style="opacity:0.8;margin-top:10px;">Round starts when host submits.</p></div>`;
- }
+  if(this.isHost){
+    container.innerHTML='<div class="glass-card animate-fade gv">'
+      +'<div class="gv-top"><span class="badge-pill">✏️ CUSTOM PROMPT</span></div>'
+      +'<h2 class="gv-q">Write your own</h2>'
+      +'<p class="gv-note gv-center" style="margin-bottom:16px;">Type a topic or roll one from the bank.</p>'
+      +'<input type="text" id="custom-prompt-input" class="input-field gv-text" maxlength="120" placeholder="Type a topic…" />'
+      +'<div class="gv-stack" style="margin-top:14px;">'
+      +'<button class="btn-primary gv-wide" id="btn-submit-draft">Launch it</button>'
+      +'<button class="btn-secondary gv-wide" id="btn-roll-random">Roll a random one</button>'
+      +'<button class="btn-secondary gv-wide" onclick="window.App.hostReturnToLobby()">Back to lobby</button></div></div>';
+    document.getElementById('btn-submit-draft').addEventListener('click',()=>{
+      const v=document.getElementById('custom-prompt-input').value.trim();
+      if(!v){alert('Type something first');return;}
+      this.hostLaunchGame(this.roomData.game_type,v);
+    });
+    document.getElementById('btn-roll-random').addEventListener('click',()=>this.hostLaunchGame(this.roomData.game_type));
+  }else{
+    container.innerHTML='<div class="glass-card animate-fade gv"><div class="gv-locked">'
+      +'<div class="spinner"></div><h3>Host is writing…</h3>'
+      +'<p class="gv-note">The round starts as soon as they submit.</p></div></div>';
+  }
 }
 renderActiveGame(container){
- const prompt=this.roomData.current_prompt||{};const gameType=this.roomData.game_type;const choices=this.roomData.choices||{};const myChoice=choices[this.myUid];const players=this.roomData.players||[];const partner=players.find(p=>p.id!==this.myUid)||{name:'Partner'};const partnerHasChoice=partner.id&&choices[partner.id]!==undefined;
- let html=`<div class="glass-card animate-fade"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><span class="badge-pill">&#128293; STREAK: ${this.roomData.streak||0}</span><span class="badge-pill">ROUND ${this.roomData.round||1}</span></div><div style="margin-bottom:20px;text-align:center;"><h2 style="font-size:1.32rem;font-weight:800;">${esc(prompt.question||prompt.topic||prompt.scenario||prompt.title||'Answer the Question')}</h2>${prompt.target&&gameType==='secretGuess'?`<div style="margin-top:8px;font-size:0.85rem;opacity:0.7;">Target is hidden &#128274;</div>`:''}</div>`;
- html+=`<div style="display:flex;gap:10px;margin-bottom:20px;justify-content:center;"><div class="status-chip ${myChoice!==undefined?'ready':'waiting'}">You: ${myChoice!==undefined?'&#10004; Locked In':'Thinking...'}</div><div class="status-chip ${partnerHasChoice?'ready':'waiting'}">${partner.name}: ${partnerHasChoice?'&#10004; Locked In':'Thinking...'}</div></div>`;
- if(myChoice!==undefined){
- html+=`<div style="text-align:center;padding:30px 10px;" class="glass-card"><div class="spinner" style="margin:0 auto 16px auto;"></div><h3>Locked! &#128274;</h3><p style="opacity:0.8;margin-top:8px;">Waiting for ${partner.name}... Choice is [ HIDDEN ] until all lock in.</p></div>`;
- } else {
-  if(gameType==='wouldRather'||gameType==='bucketList'){
-   html+=`<div style="display:flex;flex-direction:column;gap:14px;"><button class="btn-primary" onclick="window.App.submitChoice('${(prompt.optionA||'Option A').replace(/'/g,"\\'")}')" style="padding:18px;font-size:1.05rem;">${prompt.optionA||'Option A'}</button><button class="btn-secondary" onclick="window.App.submitChoice('${(prompt.optionB||'Option B').replace(/'/g,"\\'")}')" style="padding:18px;font-size:1.05rem;">${prompt.optionB||'Option B'}</button></div>`;
-  } else if(gameType==='redGreenFlag'){
-   html+=`<div style="display:flex;gap:16px;"><button class="btn-primary" onclick="window.App.submitChoice('GREEN FLAG')" style="flex:1;background:linear-gradient(135deg,#00E676,#00B0FF);padding:20px;font-size:1.1rem;">&#128689; GREEN FLAG</button><button class="btn-primary" onclick="window.App.submitChoice('RED FLAG')" style="flex:1;background:linear-gradient(135deg,#FF1744,#FF5252);padding:20px;font-size:1.1rem;">&#128681; RED FLAG</button></div>`;
-  } else if(gameType==='hotTakes'){
-   html+=`<div style="display:flex;gap:16px;"><button class="btn-primary" onclick="window.App.submitChoice('AGREE')" style="flex:1;background:linear-gradient(135deg,#00E676,#00B0FF);padding:20px;font-size:1.1rem;">&#128077; AGREE</button><button class="btn-primary" onclick="window.App.submitChoice('DISAGREE')" style="flex:1;background:linear-gradient(135deg,#FF1744,#FF5252);padding:20px;font-size:1.1rem;">&#128078; DISAGREE</button></div>`;
-  } else if(gameType==='truthOrDare'){
-   const mode=prompt.mode||'TRUTH';html+=`<div style="text-align:center;"><div class="badge-pill" style="margin-bottom:14px;background:var(--primary);color:#fff;">${mode} MODE</div>${mode==='TRUTH'?`<input type="text" id="truth-input" class="input-field" placeholder="Type answer..." style="margin-bottom:16px;text-align:center;font-size:1.1rem;"/><button class="btn-primary" id="btn-submit-truth" style="width:100%;">Lock In Truth</button>`:`<p style="opacity:0.9;margin-bottom:16px;">Perform dare live via voice/video, then complete!</p><button class="btn-primary" onclick="window.App.submitChoice('DARE COMPLETED!')" style="width:100%;padding:18px;">&#10004; I Completed Dare!</button>`}</div>`;
-  } else if(gameType==='compatQuiz'){
-   const options=prompt.options||["Me","Partner","Both","Neither"];html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;options.forEach(opt=>{let label=opt;if(opt==='Me')label=this.myName||'Me';if(opt==='Partner')label=partner.name||'Partner';html+=`<button class="btn-secondary" onclick="window.App.submitChoice('${opt}')" style="padding:16px;font-size:1rem;">${label}</button>`;});html+=`</div>`;
-  } else if(gameType==='mindMeld'){
-   html+=`<div style="text-align:center;"><input type="text" id="mindmeld-input" class="input-field" placeholder="Type 1-word answer..." style="margin-bottom:16px;text-align:center;font-size:1.2rem;"/><button class="btn-primary" id="btn-submit-mindmeld" style="width:100%;">Lock In Word</button></div>`;
-  } else if(gameType==='vibeSlider'||gameType==='percentage'){
-   html+=`<div style="text-align:center;padding:10px 0;"><div id="slider-val-display" style="font-size:2.5rem;font-weight:900;margin-bottom:12px;color:var(--secondary);">50</div><input type="range" id="vibe-range" min="0" max="100" value="50" oninput="document.getElementById('slider-val-display').innerText=this.value"/><button class="btn-primary" onclick="window.App.submitChoice(document.getElementById('vibe-range').value)" style="width:100%;margin-top:18px;">Lock In Value</button></div>`;
-  } else if(gameType==='secretGuess'){
-   const items=prompt.items||(window.Picker?window.Picker.get50Items():[]);html+=`<div class="options-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;max-height:340px;overflow-y:auto;padding:8px;">`;items.forEach(item=>{html+=`<button class="btn-secondary" onclick="window.App.submitChoice('${item.replace(/'/g,"\\'")}')" style="padding:10px 4px;font-size:0.8rem;">${item}</button>`;});html+=`</div>`;
-  } else if(gameType==='blindRank'){
-   const items=prompt.items||[];const currentItem=items[this.blindRankStep]||'Final Item';html+=`<div style="text-align:center;"><div class="badge-pill" style="margin-bottom:10px;">Item ${this.blindRankStep+1} of 5</div><h3 style="font-size:1.3rem;margin-bottom:16px;color:var(--secondary);">${currentItem}</h3><div style="display:flex;flex-direction:column;gap:8px;">`;for(let i=0;i<5;i++){const filled=this.blindRankSelections[i];html+=`<button class="btn-secondary" ${filled?'disabled style="opacity:0.5;"':`onclick="window.App.handleBlindRankSelect(${i},'${currentItem.replace(/'/g,"\\'")}')"`} style="padding:12px;font-size:0.95rem;">Slot ${i+1}: ${filled||'[ Empty ]'}</button>`;}html+=`</div></div>`;
+  const prompt=this.roomData.current_prompt||{};
+  const gameType=this.roomData.game_type;
+  const choices=this.roomData.choices||{};
+  const myChoice=choices[this.myUid];
+  const players=this.roomData.players||[];
+  const partner=players.find(p=>p.id!==this.myUid)||{name:'Partner'};
+  const partnerHasChoice=partner.id&&choices[partner.id]!==undefined;
+  const q=prompt.question||prompt.topic||prompt.scenario||prompt.title||'Answer the question';
+
+  let html='<div class="glass-card animate-fade gv">';
+  html+='<div class="gv-top"><span class="badge-pill">🔥 STREAK '+(this.roomData.streak||0)+'</span><span class="badge-pill">ROUND '+(this.roomData.round||1)+'</span></div>';
+  html+='<h2 class="gv-q">'+esc(q)+'</h2>';
+  if(prompt.target&&gameType==='secretGuess')html+='<p class="gv-hint">🔒 Target is hidden</p>';
+  html+='<div class="gv-players">'
+    +'<div class="status-chip '+(myChoice!==undefined?'ready':'waiting')+'">'+this._av(this.myUid)+' You: '+(myChoice!==undefined?'✓ Locked in':'Thinking…')+'</div>'
+    +'<div class="status-chip '+(partnerHasChoice?'ready':'waiting')+'">'+this._av(partner.id)+' '+esc(partner.name)+': '+(partnerHasChoice?'✓ Locked in':'Thinking…')+'</div>'
+    +'</div>';
+  if(myChoice!==undefined){
+    html+='<div class="gv-locked"><div class="spinner"></div><h3>Locked in 🔒</h3>'
+      +'<p class="gv-note">Waiting for '+esc(partner.name)+'. Nothing is revealed until you both answer.</p></div>';
+  }else{
+    html+='<div class="gv-panel">'+this._gameInput(gameType,prompt,partner)+'</div>';
   }
- }
- if(this.isHost){html+=`<div style="margin-top:24px;border-top:1px solid var(--border-glass);padding-top:16px;display:flex;gap:10px;"><button class="btn-primary" onclick="window.App.forceRevealResults()" style="flex:1;">Reveal Now</button><button class="btn-secondary" onclick="window.App.hostNextRound()" style="flex:1;">Skip</button><button class="btn-secondary" onclick="window.App.hostReturnToLobby()" style="flex:1;">Lobby</button></div>`;}
- html+=`</div>`;container.innerHTML=html;
- const mmBtn=document.getElementById('btn-submit-mindmeld');if(mmBtn){mmBtn.addEventListener('click',()=>{const val=document.getElementById('mindmeld-input').value.trim();if(val)this.submitChoice(val);else alert('Enter a word!');});}
- const truthBtn=document.getElementById('btn-submit-truth');if(truthBtn){truthBtn.addEventListener('click',()=>{const val=document.getElementById('truth-input').value.trim()||'Answered Live';this.submitChoice(val);});}
+  if(this.isHost){
+    html+='<div class="gv-host">'
+      +'<button class="btn-primary" onclick="window.App.forceRevealResults()">Reveal</button>'
+      +'<button class="btn-secondary" onclick="window.App.hostNextRound()">Skip</button>'
+      +'<button class="btn-secondary" onclick="window.App.hostReturnToLobby()">Lobby</button></div>';
+  }
+  html+='</div>';
+  container.innerHTML=html;
+  this._bindGameInput(gameType,prompt);
+}
+
+_gameInput(gameType,prompt,partner){
+  if(gameType==='wouldRather'||gameType==='bucketList'){
+    const a=prompt.optionA||'Option A',b=prompt.optionB||'Option B';
+    return '<div class="gv-stack">'
+      +'<button class="btn-primary gv-option" data-pick="a">'+esc(a)+'</button>'
+      +'<button class="btn-secondary gv-option" data-pick="b">'+esc(b)+'</button></div>';
+  }
+  if(gameType==='truthOrDare'){
+    const mode=prompt.mode||'TRUTH';
+    if(mode==='TRUTH'){
+      return '<div class="gv-stack"><input type="text" id="truth-input" class="input-field gv-text" placeholder="Type your answer…" maxlength="120" />'
+        +'<button class="btn-primary gv-wide" id="btn-submit-truth">Lock In Truth</button></div>';
+    }
+    return '<div class="gv-stack"><p class="gv-note">Do it live on voice or video, then confirm.</p>'
+      +'<button class="btn-primary gv-wide" data-pick="done">✓ I did the dare</button></div>';
+  }
+  if(gameType==='mindMeld'){
+    return '<div class="gv-stack"><input type="text" id="mindmeld-input" class="input-field gv-text" placeholder="One word…" maxlength="24" />'
+      +'<button class="btn-primary gv-wide" id="btn-submit-mindmeld">Lock In Word</button></div>';
+  }
+  if(gameType==='percentage'){
+    return '<div class="gv-stack gv-center">'
+      +'<div class="gv-big" id="slider-val-display">50<span>%</span></div>'
+      +'<input type="range" id="vibe-range" class="gv-range" min="0" max="100" value="50" />'
+      +'<button class="btn-primary gv-wide" id="btn-submit-slider">Lock In Value</button></div>';
+  }
+  if(gameType==='secretGuess'){
+    const items=prompt.items||(window.Picker?window.Picker.get50Items():[]);
+    return '<div class="gv-grid4">'+items.map(it=>'<button class="btn-secondary gv-word" data-pick="'+esc(it)+'">'+esc(it)+'</button>').join('')+'</div>';
+  }
+  if(gameType==='blindRank'){
+    const items=prompt.items||[];
+    const cur=items[this.blindRankStep]||'Final item';
+    let out='<div class="gv-center"><div class="badge-pill">Item '+(this.blindRankStep+1)+' of 5</div>'
+      +'<h3 class="gv-rank-item">'+esc(cur)+'</h3><div class="gv-stack">';
+    for(let i=0;i<5;i++){
+      const filled=this.blindRankSelections[i];
+      out+='<button class="btn-secondary gv-slot'+(filled?' full':'')+'"'+(filled?' disabled':' data-slot="'+i+'"')+'>'
+        +'<span class="gv-slot-n">Slot '+(i+1)+'</span><span class="gv-slot-v">'+(filled?esc(filled):'Empty')+'</span></button>';
+    }
+    return out+'</div></div>';
+  }
+  return '<button class="btn-primary gv-wide" data-pick="done">Continue</button>';
+}
+
+_bindGameInput(gameType,prompt){
+  const root=document.getElementById('game-view')||document;
+  const pick=v=>this.submitChoice(v);
+  root.querySelectorAll('[data-pick]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const v=b.getAttribute('data-pick');
+      if(v==='a')pick(prompt.optionA||'Option A');
+      else if(v==='b')pick(prompt.optionB||'Option B');
+      else if(v==='done')pick('DARE COMPLETED!');
+      else pick(v);
+    });
+  });
+  root.querySelectorAll('[data-slot]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const items=prompt.items||[];
+      this.handleBlindRankSelect(Number(b.getAttribute('data-slot')),items[this.blindRankStep]||'');
+    });
+  });
+  const truth=document.getElementById('btn-submit-truth');
+  if(truth)truth.addEventListener('click',()=>{
+    const el=document.getElementById('truth-input');
+    const v=el?el.value.trim():'';
+    if(!v){alert('Type your answer first');return;}
+    this.submitChoice(v);
+  });
+  const mm=document.getElementById('btn-submit-mindmeld');
+  if(mm)mm.addEventListener('click',()=>{
+    const el=document.getElementById('mindmeld-input');
+    const v=el?el.value.trim():'';
+    if(!v){alert('One word, any word');return;}
+    this.submitChoice(v);
+  });
+  const range=document.getElementById('vibe-range');
+  if(range){
+    const out=document.getElementById('slider-val-display');
+    range.addEventListener('input',()=>{if(out)out.innerHTML=range.value+'<span>%</span>';});
+    const go=document.getElementById('btn-submit-slider');
+    if(go)go.addEventListener('click',()=>this.submitChoice(range.value));
+  }
 }
 handleBlindRankSelect(slotIdx,itemText){this.blindRankSelections[slotIdx]=itemText;this.blindRankStep++;if(this.blindRankStep>=5){this.submitChoice(JSON.stringify(this.blindRankSelections));}else{this.renderScreen();}}
 renderComparison(container){
- const prompt=this.roomData.current_prompt||{};const gameType=this.roomData.game_type;const choices=this.roomData.choices||{};const players=this.roomData.players||[];const p1=players[0]||{id:this.myUid,name:this.myName||'Player 1'};const p2=players[1]||{id:'p2',name:'Partner'};const c1=choices[p1.id];const c2=choices[p2.id];
- let isMatch=false;
- if(c1!==undefined&&c2!==undefined){
-  if(gameType==='wouldRather'||gameType==='redGreenFlag'||gameType==='compatQuiz'||gameType==='hotTakes'||gameType==='bucketList'||gameType==='truthOrDare'){isMatch=(String(c1).trim()===String(c2).trim());}
-  else if(gameType==='mindMeld'){isMatch=(String(c1).toLowerCase().trim()===String(c2).toLowerCase().trim());}
-  else if(gameType==='vibeSlider'||gameType==='percentage'){isMatch=(Math.abs(Number(c1)-Number(c2))<=15);}
-  else if(gameType==='secretGuess'){if(prompt.target){isMatch=(String(c1).toLowerCase()===String(prompt.target).toLowerCase()&&String(c2).toLowerCase()===String(prompt.target).toLowerCase());}else{isMatch=(String(c1).trim()===String(c2).trim());}}
-  else if(gameType==='blindRank'){isMatch=(String(c1)===String(c2));}
- }
- if(isMatch){document.body.classList.remove('dv-win');void document.body.offsetWidth;document.body.classList.add('dv-win');}
- if(this.isHost&&!isMatch&&!prompt.penalty&&(this.roomData.streak||0)>=2){
-  const dare=window.Picker?window.Picker.nextItem('dares'):null;
-  const dareText=dare?(typeof dare==='string'?dare:(dare.text||dare.content||'')):'Do a funny dance!';
-  if(dareText){prompt.penalty=dareText;this.roomData.current_prompt=prompt;this.updateRoomState({current_prompt:prompt});}
- }
- if(this.isHost){const cur=this.roomData.streak||0;if(isMatch)this.updateStreak(cur+1);else this.updateStreak(0);}
- let html=`<div class="glass-card animate-fade" style="text-align:center;"><div class="match-box" style="padding:20px;border-radius:16px;margin-bottom:20px;background:${isMatch?'rgba(0,230,118,0.15)':'rgba(255,23,68,0.15)'};border:2px solid ${isMatch?'#00E676':'#FF1744'};"><h1 style="font-size:1.8rem;margin-bottom:6px;">${isMatch?'&#127881; PERFECT MATCH!':'&#128148; NOT A MATCH'}</h1><p style="opacity:0.9;">${isMatch?'Same wavelength!':'Different vibes this time!'}</p></div><h3 style="margin-bottom:16px;">Revealed Answers</h3>`;
- if(gameType==='secretGuess'&&prompt.target){html+=`<div class="badge-pill" style="margin-bottom:14px;background:rgba(0,229,255,0.2);">Secret Target Was: ${prompt.target}</div>`;}
- html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;"><div class="glass-card" style="padding:16px;"><div style="font-size:0.85rem;opacity:0.8;margin-bottom:6px;">${esc(p1.name)}</div><div style="font-size:1.1rem;font-weight:800;color:var(--secondary);word-break:break-word;">${c1!==undefined?esc(c1):'No answer'}</div></div><div class="glass-card" style="padding:16px;"><div style="font-size:0.85rem;opacity:0.8;margin-bottom:6px;">${esc(p2.name)}</div><div style="font-size:1.1rem;font-weight:800;color:var(--primary);word-break:break-word;">${c2!==undefined?esc(c2):'No answer'}</div></div></div>`;
- if(!isMatch&&prompt.penalty){html+=`<div class="penalty-box" style="margin-bottom:24px;padding:18px;border-radius:14px;background:rgba(255,46,147,0.2);border:1px solid var(--primary);"><div class="badge-pill" style="background:var(--primary);color:#fff;margin-bottom:8px;">&#9888;&#65039; STREAK PENALTY DARE</div><p style="font-size:1rem;font-weight:700;color:#fff;">${esc(prompt.penalty)}</p></div>`;}
- if(this.isHost){html+=`<div style="display:flex;gap:12px;margin-top:20px;"><button class="btn-primary" onclick="window.App.hostNextRound()" style="flex:1;">Next Round &#10140;</button><button class="btn-secondary" onclick="window.App.hostReturnToLobby()" style="flex:1;">Change Game</button></div>`;}else{html+=`<div style="margin-top:20px;text-align:center;"><p style="opacity:0.8;font-size:0.9rem;">Waiting for host to start next round...</p></div>`;}
- html+=`</div>`;container.innerHTML=html;
+  const prompt=this.roomData.current_prompt||{};
+  const gameType=this.roomData.game_type;
+  const choices=this.roomData.choices||{};
+  const players=this.roomData.players||[];
+  const p1=players[0]||{id:this.myUid,name:this.myName||'Player 1'};
+  const p2=players[1]||{id:'p2',name:'Partner'};
+  const c1=choices[p1.id],c2=choices[p2.id];
+  let isMatch=false;
+  if(c1!==undefined&&c2!==undefined){
+    if(gameType==='wouldRather'||gameType==='truthOrDare'||gameType==='bucketList'){isMatch=(String(c1).trim()===String(c2).trim());}
+    else if(gameType==='mindMeld'){isMatch=(String(c1).toLowerCase().trim()===String(c2).toLowerCase().trim());}
+    else if(gameType==='vibeSlider'||gameType==='percentage'){isMatch=(Math.abs(Number(c1)-Number(c2))<=15);}
+    else if(gameType==='secretGuess'){if(prompt.target){isMatch=(String(c1).toLowerCase()===String(prompt.target).toLowerCase()&&String(c2).toLowerCase()===String(prompt.target).toLowerCase());}else{isMatch=(String(c1).trim()===String(c2).trim());}}
+    else if(gameType==='blindRank'){isMatch=(String(c1)===String(c2));}
+  }
+  if(isMatch){document.body.classList.remove('dv-win');void document.body.offsetWidth;document.body.classList.add('dv-win');}
+  if(this.isHost&&!isMatch&&!prompt.penalty&&(this.roomData.streak||0)>=2){
+    const dare=window.Picker?window.Picker.nextItem('dares'):null;
+    const dareText=dare?(typeof dare==='string'?dare:(dare.text||dare.content||'')):'Do a funny dance!';
+    if(dareText){prompt.penalty=dareText;this.roomData.current_prompt=prompt;this.updateRoomState({current_prompt:prompt});}
+  }
+  if(this.isHost){const cur=this.roomData.streak||0;if(isMatch)this.updateStreak(cur+1);else this.updateStreak(0);}
+
+  let html='<div class="glass-card animate-fade gv">';
+  html+='<div class="gv-top"><span class="badge-pill">ROUND '+(this.roomData.round||1)+'</span>'
+    +'<span class="badge-pill">🔥 STREAK '+(this.roomData.streak||0)+'</span></div>';
+  html+='<div class="gv-verdict '+(isMatch?'good':'bad')+'">'
+    +'<div class="gv-verdict-t">'+(isMatch?'🎉 MATCH':'💔 NO MATCH')+'</div>'
+    +'<div class="gv-verdict-s">'+(isMatch?'Same wavelength.':'Different vibes this time.')+'</div></div>';
+  if(gameType==='secretGuess'&&prompt.target){html+='<div class="gv-target">Secret was <b>'+esc(prompt.target)+'</b></div>';}
+  html+='<div class="gv-reveal">';
+  html+=this._revealCard(p1.name,c1,isMatch,p1.id);
+  html+=this._revealCard(p2.name,c2,isMatch,p2.id);
+  html+='</div>';
+  if(!isMatch&&prompt.penalty){
+    html+='<div class="gv-penalty"><div class="gv-penalty-tag">⚠️ STREAK PENALTY</div><p>'+esc(prompt.penalty)+'</p></div>';
+  }
+  if(this.isHost){
+    html+='<div class="gv-host gv-host-main"><button class="btn-primary" onclick="window.App.hostNextRound()">Next Round →</button>'
+      +'<button class="btn-secondary" onclick="window.App.hostReturnToLobby()">Change Game</button></div>';
+  }else{
+    html+='<p class="gv-note gv-center">Waiting for the host to start the next round…</p>';
+  }
+  html+='</div>';
+  container.innerHTML=html;
+}
+
+_av(uid){
+  const p=(this.roomData&&this.roomData.players||[]).find(x=>x.id===uid);
+  return (window.Avatars&&p)?window.Avatars.html(p.emoji):'';
+}
+
+_revealCard(name,value,isMatch,uid){
+  const shown=value===undefined?'No answer':esc(value);
+  return '<div class="gv-reveal-card'+(isMatch?' match':'')+'">'
+    +'<div class="gv-reveal-name">'+this._av(uid)+' '+esc(name)+'</div>'
+    +'<div class="gv-reveal-val">'+shown+'</div></div>';
 }
 }
 window.DuoVibeApp=DuoVibeApp;

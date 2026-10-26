@@ -5,7 +5,7 @@
    connection. Game state is never cached — every room read goes to the
    network so two players cannot drift apart on stale data.
    ═══════════════════════════════════════════════════════════════════ */
-const CACHE = 'duovibe-v11';
+const CACHE = 'duovibe-v15';
 const SHELL = [
   './',
   './index.html',
@@ -15,6 +15,10 @@ const SHELL = [
   './banks.js',
   './app.js',
   './minigames.js',
+  './partygames.js',
+  './deck.js',
+  './social.js',
+  './icons.js',
   './features.js',
   './manifest.json',
   './icon.svg'

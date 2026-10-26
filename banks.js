@@ -603,13 +603,16 @@ window.GAME_BANKS = {
     _bags: load(),
 
     /* Next unused index for a bank. Returns -1 only if the bank is empty. */
-    nextIndex(cat) {
+    /* seed is usually the room code: every room gets its own order. */
+    nextIndex(cat, seed) {
       const list = window.GAME_BANKS[cat] || window.GAME_BANKS.wouldRather;
       if (!list || !list.length) return -1;
 
       let bag = this._bags[cat];
       if (!Array.isArray(bag) || bag.length === 0) {
-        bag = shuffle(list.length);
+        bag = (window.Deck)
+          ? window.Deck.order(cat, list.length, seed, 'bag', true)
+          : shuffle(list.length);
         this._bags[cat] = bag;
       }
 
@@ -622,14 +625,15 @@ window.GAME_BANKS = {
         if (alt !== undefined) { bag.unshift(idx); idx = alt; }
       }
       this._bags['_last_' + cat] = idx;
+      if (window.Deck) window.Deck.markSeen(cat, idx);
 
       save(this._bags);
       return idx;
     },
 
-    nextItem(cat) {
+    nextItem(cat, seed) {
       const list = window.GAME_BANKS[cat] || window.GAME_BANKS.wouldRather;
-      const idx = this.nextIndex(cat);
+      const idx = this.nextIndex(cat, seed);
       if (idx < 0) return { question: 'Default question' };
       const item = list[idx];
 

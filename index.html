@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap" media="print" onload="this.media='all'">
 
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 <div id="app-root">
@@ -36,7 +36,15 @@
     <p style="text-align:center;opacity:0.8;font-size:0.9rem;margin-bottom:20px;">Create a room or join your partner &mdash; real-time sync, no refresh needed.</p>
 
     <label style="font-size:0.85rem;opacity:0.8;" for="player-name-input">Your Display Name</label>
-    <input id="player-name-input" class="input-field" placeholder="e.g. Alex" maxlength="20" autocomplete="nickname" style="margin-bottom:14px;margin-top:6px;"/>
+    <input id="player-name-input" class="input-field" placeholder="e.g. Alex" maxlength="20" autocomplete="nickname" style="margin-bottom:12px;margin-top:6px;"/>
+
+    <div class="av-row" style="margin-bottom:16px;">
+      <div class="av-head">
+        <span class="av-label">Your icon</span>
+        <button type="button" id="btn-av-shuffle" class="av-shuffle">Shuffle</button>
+      </div>
+      <div id="avatar-picker" class="av-grid"></div>
+    </div>
 
     <button id="btn-create-room" class="btn-primary" style="width:100%;margin-bottom:14px;">&#10024; Create New Room</button>
 
@@ -56,8 +64,12 @@
 <script src="config.js?v=11"></script>
 <script src="supabase-lite.js?v=11"></script>
 <script src="banks.js?v=11"></script>
-<script src="app.js?v=11"></script>
+<script src="app.js?v=15"></script>
 <script src="minigames.js?v=11"></script>
+<script src="deck.js?v=15"></script>
+<script src="icons.js?v=14"></script>
+<script src="partygames.js?v=13"></script>
+<script src="social.js?v=15"></script>
 <script src="features.js?v=11"></script>
 <script>
 if ('serviceWorker' in navigator) {
