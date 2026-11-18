@@ -1,7 +1,6 @@
-// DuoVibe Supabase Configuration
+// A browser publishable key is intentionally public. Room access is enforced
+// by authenticated sessions and the policies/RPCs in supabase-schema.sql.
 window.SUPABASE_CONFIG = {
-  SUPABASE_URL: "https://sbalrqevmjeusmihaguo.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiYWxycWV2bWpldXNtaWhhZ3VvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1NDA5NDgsImV4cCI6MjEwODExNjk0OH0.niIILB3hoPZ2xONzdie3IhbMCMAVeszgu3Eu-_WI4eo"
+  SUPABASE_URL: "https://waraigofwvtaicuuregf.supabase.co",
+  SUPABASE_PUBLISHABLE_KEY: "sb_publishable_evxJYzXEB8VIc0yHzHZHKg_E9Oz9Pih"
 };
-const SUPABASE_URL = window.SUPABASE_CONFIG.SUPABASE_URL;
-const SUPABASE_ANON_KEY = window.SUPABASE_CONFIG.SUPABASE_ANON_KEY;

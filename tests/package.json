@@ -1,0 +1,13 @@
+{
+  "name": "duovibe-tests",
+  "private": true,
+  "scripts": {
+    "test": "node --test auth-test.js schema-test.js",
+    "test:browser": "node browser-test.js",
+    "test:live": "node live-smoke.js"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.16",
+    "playwright": "1.65.1"
+  }
+}

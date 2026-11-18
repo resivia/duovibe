@@ -1,5 +1,6 @@
 [build]
-  publish = "."
+  command = "node scripts/site-files.js"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -28,6 +29,11 @@
 
 [[headers]]
   for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/config.js"
   [headers.values]
     Cache-Control = "no-cache"
 

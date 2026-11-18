@@ -1,0 +1,35 @@
+name: Verify DuoVibe
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      live_smoke:
+        description: Run a live Supabase smoke test (two guest sessions and one temporary room)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix tests
+      - run: npm test --prefix tests
+      - run: node scripts/site-files.js
+      - run: npx --prefix tests playwright install --with-deps chromium
+      - run: npm run test:browser --prefix tests
+      - name: Check live Supabase
+        if: (github.event_name == 'workflow_dispatch' && inputs.live_smoke) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[live-smoke]'))
+        env:
+          DUOVIBE_LIVE_SMOKE: '1'
+        run: npm run test:live --prefix tests

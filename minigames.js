@@ -39,7 +39,7 @@
       { q: 'Your real age',                    sub: 'The honest one. No judgement.',                    min: 1, max: 120, limit: 7 },
       { q: 'The age you feel inside',          sub: 'Forget the birth certificate.',                    min: 1, max: 120, limit: 7 },
       { q: 'The age you act when you are tired', sub: 'The version of you at 11pm.',                    min: 1, max: 120, limit: 7 },
-      { q: 'The age you were when we first met', sub: 'Whatever number that is for you.',                min: 1, max: 120, limit: 7 },
+      { q: 'The age you were when we first started talking', sub: 'Whatever number that is for you.',                min: 1, max: 120, limit: 7 },
       { q: 'The age you think you look',       sub: 'Flatter yourself. We will find out.',              min: 1, max: 120, limit: 7 },
       { q: 'The age you would freeze at forever', sub: 'One number. No changing your mind.',            min: 1, max: 120, limit: 7 },
       { q: 'The age you were at your best',    sub: 'The year you would replay.',                       min: 1, max: 120, limit: 7 },
@@ -52,7 +52,7 @@
       { q: 'The number of times you thought about them today', sub: 'Be honest.',                       min: 1, max: 200, limit: 9 },
       { q: 'A number with a story behind it',  sub: 'A date, a flat, a lucky shirt.',                   min: 1, max: 999, limit: 11 },
       { q: 'Your favourite number under 50',   sub: 'Small number, strong feelings.',                   min: 1, max: 50,  limit: 7 },
-      { q: 'The number of days until you meet again', sub: 'Count them.',                              min: 1, max: 365, limit: 10 },
+      { q: 'The number of days you’d spend on an imaginary road trip', sub: 'Count them.',                              min: 1, max: 365, limit: 10 },
       { q: 'A number you would never forget',  sub: 'Pick it before you talk yourself out of it.',      min: 1, max: 999, limit: 11 }
     ]
   };
@@ -95,10 +95,9 @@
     if (!choices || !uid) return null;
     const raw = choices[uid];
     if (raw === undefined || raw === null || raw === '') return null;
-    if (typeof raw === 'object') return raw;
     try {
-      const o = JSON.parse(raw);
-      return (o && typeof o === 'object') ? o : null;
+      const o = typeof raw === 'object' ? raw : JSON.parse(raw);
+      return o && Number.isInteger(o.s) ? { s: o.s, g: guessesOf(o).filter(Number.isInteger) } : null;
     } catch (e) { return null; }
   }
 

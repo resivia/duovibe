@@ -120,13 +120,15 @@
 
   /* ── prompt builders (host only) ─────────────────────────────── */
 
-  function buildPrompt(gameType, players, scores) {
+  function buildPrompt(gameType, players, scores, round = 1, seed) {
     scores = scores || {};
     if (gameType === 'twoTruths') {
       return { party: 'twoTruths', question: TT_PROMPTS[Math.floor(Math.random() * TT_PROMPTS.length)], scores: scores };
     }
     if (gameType === 'emojiClue') {
-      return { party: 'emojiClue', scores: scores };
+      const [target, category] = window.Deck.one('emojiClue', EMOJI_BANK, seed);
+      const options = buildOptions(target, category);
+      return { party: 'emojiClue', scores, round, _target: target, _opts: options.o, _ans: options.a };
     }
     if (gameType === 'speedRound') {
       const src = (window.GAME_BANKS && window.GAME_BANKS.wouldRather) || [];
@@ -148,7 +150,7 @@
       total[pl.id] = (total[pl.id] || 0) + pts;
     });
 
-    return buildPrompt(gameType, players, total);
+    return buildPrompt(gameType, players, total, app.roomData.round + 1, app.roomId);
   }
 
   /* Points earned by `uid` in the given prompt. */
@@ -159,7 +161,7 @@
     if (prompt.party === 'twoTruths') {
       const other = players.find(x => x.id !== uid);
       const them = other ? slot(choices, other.id) : null;
-      if (!me || !them || !Array.isArray(them.s) || them.l == null) return 0;
+      if (!me || me.g == null || !them || !Array.isArray(them.s) || them.l == null) return 0;
       return (Number(me.g) === Number(them.l)) ? 2 : 0;
     }
 
@@ -337,14 +339,6 @@
         return;
       }
 
-      /* The clue giver gets a secret target. */
-      if (!prompt._target || prompt._round !== round) {
-        const pick = EMOJI_BANK[Math.floor(Math.random() * EMOJI_BANK.length)];
-        const built = buildOptions(pick[0], pick[1]);
-        app.updateRoomState({ current_prompt: Object.assign({}, prompt, { _target: pick[0], _round: round, _opts: built.o, _ans: built.a }) });
-        return;
-      }
-
       el.innerHTML = shell(
         header(round, '🙂 YOUR TURN TO CLUE') +
         '<h2 class="mg-q">Make them guess…</h2>' +
@@ -517,8 +511,9 @@
       });
     });
 
+    const turn = app.roomData.turn_token;
     srTimer = setInterval(() => {
-      if (!app.roomId) { clearInterval(srTimer); return; }
+      if (app.roomData?.turn_token !== turn) { clearInterval(srTimer); return; }
       const rest = Math.max(0, (prompt.startedAt + prompt.dur) - Date.now());
       const bar = el.querySelector('.sr-clock-fill');
       if (bar) bar.style.width = Math.round((rest / prompt.dur) * 100) + '%';

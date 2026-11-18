@@ -5,8 +5,9 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const ROOT = process.env.ROOT || '/home/user/duovibe';
+const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.PORT || 8090);
+const PUBLIC = new Set(require('../scripts/site-files'));
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -20,16 +21,18 @@ const TYPES = {
 
 const cache = new Map();
 
-http.createServer((req, res) => {
-  let file = decodeURIComponent(req.url.split('?')[0]);
-  if (file === '/') file = '/index.html';
+function createServer() {
+  return http.createServer(serveAsset);
+}
 
-  const full = path.join(ROOT, file);
-  if (!full.startsWith(ROOT) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) {
+function serveAsset(req, res) {
+  const pathname = req.url.split('?')[0];
+  const file = pathname === '/' ? 'index.html' : pathname.slice(1);
+  if (!PUBLIC.has(file) || !['GET', 'HEAD'].includes(req.method)) {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     return res.end('not found');
   }
-
+  const full = path.join(ROOT, file);
   const ext = path.extname(full);
   const body = fs.readFileSync(full);
   const type = TYPES[ext] || 'application/octet-stream';
@@ -43,7 +46,7 @@ http.createServer((req, res) => {
     'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; base-uri 'self'; form-action 'self'"
   };
 
-  if (file === '/sw.js' || file === '/index.html' || file === '/') {
+  if (['sw.js', 'index.html', 'config.js'].includes(file)) {
     headers['Cache-Control'] = 'no-cache';
   } else {
     headers['Cache-Control'] = 'public, max-age=31536000, immutable';
@@ -56,7 +59,7 @@ http.createServer((req, res) => {
     headers['Content-Encoding'] = 'br';
     headers['Content-Length'] = buf.length;
     res.writeHead(200, headers);
-    return res.end(buf);
+    return res.end(req.method === 'HEAD' ? undefined : buf);
   }
 
   if (compressible && accepts.includes('gzip')) {
@@ -66,10 +69,16 @@ http.createServer((req, res) => {
     headers['Content-Encoding'] = 'gzip';
     headers['Content-Length'] = buf.length;
     res.writeHead(200, headers);
-    return res.end(buf);
+    return res.end(req.method === 'HEAD' ? undefined : buf);
   }
 
   headers['Content-Length'] = body.length;
   res.writeHead(200, headers);
-  res.end(body);
-}).listen(PORT, '127.0.0.1', () => console.log('serving ' + ROOT + ' on ' + PORT));
+  res.end(req.method === 'HEAD' ? undefined : body);
+}
+
+if (require.main === module) {
+  createServer().listen(PORT, process.env.HOST || '0.0.0.0', () => console.log('DuoVibe app on port ' + PORT));
+}
+
+module.exports = { createServer };

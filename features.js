@@ -1,194 +1,103 @@
-﻿/* DuoVibe V8 - Stream & Extended Modes Overlay Engine */
-(function() {
-  function initOverlay() {
-    if (typeof window.DuoVibeApp === 'undefined') {
-      console.warn("DuoVibeApp core not found yet. Retrying...");
-      setTimeout(initOverlay, 100);
-      return;
-    }
+/* Poll, word and spy rounds. Uses the same turn-scoped writes as other games. */
+(function () {
+  'use strict';
 
-    const AppProto = window.DuoVibeApp.prototype;
+  function isSpy(type) { return type === 'spyInTheCrowd' || type === 'spy'; }
+  function isStream(type) { return isSpy(type) || type === 'flashPoll' || type === 'wordStorm'; }
 
-    // 1. Lobby cards are rendered by app.js (GAME_CARDS) - no DOM patching needed.
-
-    // 2. Enhanced hostLaunchGame Engine
-    const originalHostLaunch = AppProto.hostLaunchGame;
-    AppProto.hostLaunchGame = async function(gameType) {
-      if (gameType === 'flashPoll') {
-        const prompt = window.Picker ? window.Picker.nextItem('flashPoll') : null;
-        await this.updateRoomState({ game_type: 'flashPoll', state: 'PLAYING', current_prompt: prompt, choices: {} });
-      } else if (gameType === 'wordStorm') {
-        const prompt = window.Picker ? window.Picker.nextItem('wordStorm') : null;
-        await this.updateRoomState({ game_type: 'wordStorm', state: 'PLAYING', current_prompt: prompt, choices: {} });
-      } else if (gameType === 'spyInTheCrowd' || gameType === 'spy') {
-        const spyPrompt = this.buildSpyPrompt();
-        if (!spyPrompt) return;
-        await this.updateRoomState({ game_type: 'spyInTheCrowd', state: 'PLAYING', current_prompt: spyPrompt, choices: {} });
-      } else if (originalHostLaunch) {
-        await originalHostLaunch.call(this, gameType);
-      }
+  function buildPrompt(type, players, code) {
+    const prompt = window.Picker.nextItem(isSpy(type) ? 'spyInTheCrowd' : type, code);
+    if (!isSpy(type)) return prompt;
+    const spy = players[Math.floor(Math.random() * players.length)];
+    return {
+      ...prompt,
+      spyId: spy.id,
+      assignments: Object.fromEntries(players.map(p => [p.id, p.id === spy.id ? prompt.spyWord : prompt.commonWord])),
+      stage: 'CLUES'
     };
-
-    // Build a complete spy round: secret assignments, spy id and stage.
-    // hostLaunchGame and hostNextRound both go through this, otherwise round 2+
-    // had no assignments (every player saw '???') and no spy to reveal.
-    AppProto.buildSpyPrompt = function() {
-      const pair = window.Picker ? window.Picker.nextItem('spyInTheCrowd') : null;
-      const players = this.roomData.players || [];
-      if (!pair) return null;
-      if (players.length === 0) { alert("Need at least 1 player!"); return null; }
-      const spyIndex = Math.floor(Math.random() * players.length);
-      const spyPlayer = players[spyIndex];
-      const assignments = {};
-      players.forEach(function(p) { assignments[p.id] = (p.id === spyPlayer.id) ? pair.spyWord : pair.commonWord; });
-      return { category: pair.category, spyId: spyPlayer.id, spyName: spyPlayer.name, commonWord: pair.commonWord, spyWord: pair.spyWord, assignments: assignments, stage: 'CLUES' };
-    };
-
-    const originalHostNextRound = AppProto.hostNextRound;
-    AppProto.hostNextRound = async function() {
-      const gameType = this.roomData ? this.roomData.game_type : null;
-      if ((gameType === 'spyInTheCrowd' || gameType === 'spy') && this.isHost) {
-        const prompt = this.buildSpyPrompt();
-        if (!prompt) return;
-        await this.updateRoomState({ state: 'PLAYING', round: (this.roomData.round || 1) + 1, current_prompt: prompt, choices: {} });
-        return;
-      }
-      if (originalHostNextRound) return originalHostNextRound.call(this);
-    };
-
-    // 3. Stream Game Renderer
-    AppProto.renderStreamGame = function(container) {
-      const gameType = this.roomData.game_type;
-      const prompt = this.roomData.current_prompt || {};
-      const choices = this.roomData.choices || {};
-      const myUid = this.myUid;
-      const isHost = (myUid === this.roomData.host_id);
-      let html = '';
-
-      if (gameType === 'flashPoll') {
-        const totalVotes = Object.keys(choices).length;
-        html += '<div class="glass-card" style="text-align:center; padding:20px;"><div class="status-chip">&#9889; Flash Poll</div><h2 style="margin:16px 0;">' + (prompt.question || 'Quick Poll') + '</h2><div style="display:grid; gap:12px; margin-top:20px;">';
-        (prompt.options || []).forEach(function(opt, idx) {
-          const optVotes = Object.values(choices).filter(function(c) { return String(c) === String(idx); }).length;
-          const pct = totalVotes > 0 ? Math.round((optVotes / totalVotes) * 100) : 0;
-          const isSelected = String(choices[myUid]) === String(idx);
-          html += '<button class="btn-secondary ' + (isSelected ? 'active-selection' : '') + '" onclick="window.App.submitChoice(\'' + idx + '\')" style="position:relative; overflow:hidden; padding:16px; text-align:left; display:flex; justify-content:space-between; align-items:center;"><div style="position:absolute; left:0; top:0; bottom:0; width:' + pct + '%; background:rgba(255,255,255,0.15);"></div><span style="position:relative; z-index:2; font-weight:700;">' + opt + '</span><span style="position:relative; z-index:2; font-size:14px;">' + pct + '% (' + optVotes + ')</span></button>';
-        });
-        html += '</div></div>';
-      } else if (gameType === 'wordStorm') {
-        const myWord = choices[myUid] || '';
-        html += '<div class="glass-card" style="text-align:center; padding:20px;"><div class="status-chip">&#127786;&#65039; Word Storm</div><h2 style="margin:12px 0;">Category: ' + (prompt.category || 'General') + '</h2><div style="display:flex; gap:8px; margin-bottom:16px;"><input type="text" id="wordstorm-input" class="input-field" value="' + myWord + '" placeholder="Enter word..." style="flex:1;"><button class="btn-primary" onclick="var v=document.getElementById(\'wordstorm-input\').value.trim(); if(v) window.App.submitChoice(v);" style="width:auto; padding:0 20px;">Send</button></div><div style="margin-top:20px; text-align:left;"><h4>Words (' + Object.keys(choices).length + '):</h4><div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">' + Object.values(choices).map(function(w) { return '<span class="badge-pill">' + w + '</span>'; }).join('') + '</div></div></div>';
-      } else if (gameType === 'spyInTheCrowd' || gameType === 'spy') {
-        const assignments = prompt.assignments || {};
-        const mySecretWord = assignments[myUid] || '???';
-        const stage = prompt.stage || 'CLUES';
-        const players = this.roomData.players || [];
-        html += '<div class="glass-card" style="text-align:center; padding:20px;"><div class="status-chip">&#128373; Spy in the Crowd</div><h3 style="margin:12px 0;">Category: ' + prompt.category + '</h3><div class="glass-card" style="background:rgba(255,255,255,0.08); padding:16px; margin:16px 0; border:2px solid #ff007f;"><div style="font-size:12px; text-transform:uppercase; opacity:0.8;">Your Secret Word:</div><div style="font-size:26px; font-weight:900; margin-top:6px;">' + mySecretWord + '</div></div>';
-        if (stage === 'CLUES') {
-          const myClue = choices[myUid] || '';
-          html += '<p style="font-size:14px; opacity:0.85;">Give a one-word clue!</p><div style="display:flex; gap:8px; margin:16px 0;"><input type="text" id="spy-input" class="input-field" value="' + myClue + '" placeholder="Type clue..." style="flex:1;"><button class="btn-primary" onclick="var v=document.getElementById(\'spy-input\').value.trim(); if(v) window.App.submitChoice(v);" style="width:auto; padding:0 20px;">Submit</button></div>';
-        } else if (stage === 'VOTING') {
-          const myVote = choices[myUid] || '';
-          html += '<h4 style="margin:12px 0;">Vote for the Spy!</h4><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 0;">';
-          players.forEach(function(p) {
-            html += '<button class="btn-secondary ' + (myVote === p.id ? 'active-selection' : '') + '" onclick="window.App.submitChoice(\'' + p.id + '\')" style="padding:12px;">' + p.name + '</button>';
-          });
-          html += '</div>';
-        }
-        html += '</div>';
-      }
-
-      if (isHost) {
-        html += '<div class="glass-card" style="margin-top:16px; padding:16px; text-align:center; border:1px dashed rgba(255,255,255,0.3);"><div style="font-size:12px; font-weight:800; text-transform:uppercase; margin-bottom:10px; opacity:0.8;">Host Controls</div><div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">';
-        if (gameType === 'spyInTheCrowd' && prompt.stage === 'CLUES') {
-          html += '<button class="btn-primary" onclick="window.App.advanceSpyStage(\'VOTING\')" style="width:auto; padding:10px 18px;">Start Voting</button>';
-        }
-        html += '<button class="btn-primary" onclick="window.App.forceRevealResults()" style="width:auto; padding:10px 18px; background:linear-gradient(135deg, #ff007f, #7928ca);">Force Reveal</button>'; html += '<button class="btn-secondary" onclick="window.App.hostNextRound()" style="width:auto; padding:10px 18px;">Skip</button>'; html += '<button class="btn-secondary" onclick="window.App.hostReturnToLobby()" style="width:auto; padding:10px 18px;">Back to Lobby</button></div></div>';
-      }
-
-      container.innerHTML = html;
-    };
-
-    // 4. Stream Comparison Renderer
-    AppProto.renderStreamComparison = function(container) {
-      const gameType = this.roomData.game_type;
-      const prompt = this.roomData.current_prompt || {};
-      const choices = this.roomData.choices || {};
-      const players = this.roomData.players || [];
-      const myUid = this.myUid;
-      const isHost = (myUid === this.roomData.host_id);
-      let html = '<div class="glass-card" style="text-align:center; padding:20px;"><div class="status-chip">&#128202; Results</div><h2 style="margin:12px 0;">' + (prompt.question || prompt.category || 'Round Complete') + '</h2>';
-
-      if (gameType === 'flashPoll') {
-        const total = Object.keys(choices).length;
-        html += '<div style="display:grid; gap:10px; margin:20px 0;">';
-        (prompt.options || []).forEach(function(opt, idx) {
-          const count = Object.values(choices).filter(function(c) { return String(c) === String(idx); }).length;
-          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-          html += '<div class="glass-card" style="padding:12px; text-align:left; display:flex; justify-content:space-between; background:rgba(255,255,255,0.06);"><span style="font-weight:700;">' + opt + '</span><span class="badge-pill">' + pct + '% (' + count + ')</span></div>';
-        });
-        html += '</div>';
-      } else if (gameType === 'wordStorm') {
-        html += '<div style="margin:20px 0;"><h4>Word Submissions:</h4><div style="display:grid; gap:8px; margin-top:12px;">';
-        Object.entries(choices).forEach(function(entry) {
-          const uid = entry[0], word = entry[1];
-          const player = players.find(function(p) { return p.id === uid; });
-          html += '<div class="glass-card" style="padding:10px; text-align:left; display:flex; justify-content:space-between;"><span>' + (player ? player.name : 'Player') + ':</span><span style="font-weight:800; color:#00f2fe;">' + word + '</span></div>';
-        });
-        html += '</div></div>';
-      } else if (gameType === 'spyInTheCrowd' || gameType === 'spy') {
-        const spyPlayer = prompt.spyId ? players.find(function(p) { return p.id === prompt.spyId; }) : null;
-        html += '<div class="glass-card" style="background:rgba(255,0,127,0.15); border:2px solid #ff007f; padding:16px; margin:16px 0;"><h3 style="color:#fff; margin-bottom:6px;">The Spy Was:</h3><div style="font-size:24px; font-weight:900; color:#00f2fe;">' + (spyPlayer ? spyPlayer.name : 'Unknown') + '</div><div style="margin-top:10px; font-size:14px; opacity:0.9;">Civilian: <b>' + prompt.commonWord + '</b> | Spy: <b>' + prompt.spyWord + '</b></div></div>';
-      }
-
-      if (isHost) {
-        html += '<div style="margin-top:24px;display:flex;gap:10px;"><button class="btn-secondary" onclick="window.App.hostNextRound()" style="flex:1;">Skip</button><button class="btn-secondary" onclick="window.App.hostReturnToLobby()" style="flex:1;">Back to Lobby</button></div>';
-      }
-      html += '</div>';
-      container.innerHTML = html;
-    };
-
-    // 5. Override Core Renderers
-    const originalRenderActiveGame = AppProto.renderActiveGame;
-    AppProto.renderActiveGame = function(container) {
-      const gameType = this.roomData.game_type;
-      if (['flashPoll', 'wordStorm', 'spyInTheCrowd', 'spy'].indexOf(gameType) !== -1) {
-        this.renderStreamGame(container);
-      } else if (originalRenderActiveGame) {
-        originalRenderActiveGame.call(this, container);
-      }
-    };
-
-    const originalRenderComparison = AppProto.renderComparison;
-    AppProto.renderComparison = function(container) {
-      const gameType = this.roomData.game_type;
-      if (['flashPoll', 'wordStorm', 'spyInTheCrowd', 'spy'].indexOf(gameType) !== -1) {
-        this.renderStreamComparison(container);
-      } else if (originalRenderComparison) {
-        originalRenderComparison.call(this, container);
-      }
-    };
-
-    // 6. Host Helpers
-    AppProto.forceRevealResults = async function() {
-      await this.updateRoomState({ state: 'COMPARISON' });
-    };
-
-    AppProto.advanceSpyStage = async function(nextStage) {
-      const currentPrompt = this.roomData.current_prompt || {};
-      currentPrompt.stage = nextStage;
-      await this.updateRoomState({ current_prompt: currentPrompt, choices: {} });
-    };
-
-    console.log("DuoVibe V8 Stream Overlay LOADED SUCCESSFULLY!");
   }
 
-  // Start initialization
-  initOverlay();
+  function form(id, label, action, value) {
+    return `<form class="gv-stack stream-form" id="stream-entry">
+      <label for="${id}">${label}</label>
+      <input type="text" id="${id}" class="input-field" maxlength="80" required value="${esc(value)}">
+      <button type="submit" class="btn-primary">${action}</button>
+    </form>`;
+  }
+
+  function wordList(players, choices) {
+    return '<div class="stream-entries">' + players.filter(p => choices[p.id] !== undefined).map(p =>
+      `<div class="badge-pill">${esc(p.name)}: ${esc(choices[p.id])}</div>`
+    ).join('') + '</div>';
+  }
+
+  function render(app, el) {
+    const { game_type: type, current_prompt: prompt, state, choices, players, round } = app.roomData;
+    const spy = isSpy(type);
+    const clues = spy && prompt.stage === 'CLUES';
+    const result = state === 'COMPARISON' || (!clues && app.checkAllAnswered());
+    const label = spy ? 'Spy in the Crowd' : type === 'flashPoll' ? 'Flash Poll' : 'Word Storm';
+    const question = prompt.question || prompt.category || label;
+    const mine = choices[app.myUid] || '';
+    let html = `<div class="glass-card animate-fade gv stream">
+      <div class="gv-top"><span class="badge-pill">${label}</span><span class="badge-pill">${result ? 'Results' : 'Round ' + round}</span></div>
+      <h2 class="gv-q">${esc(question)}</h2>`;
+
+    if (type === 'flashPoll') {
+      const total = Object.keys(choices).length;
+      html += '<div class="gv-stack">' + (prompt.options || []).map((option, idx) => {
+        const count = Object.values(choices).filter(value => value === String(idx)).length;
+        const stats = `${total > 0 ? Math.round(count * 100 / total) : 0}% (${count})`;
+        if (result) return `<div class="stream-option"><strong>${esc(option)}</strong> <span>${stats}</span></div>`;
+        return `<button type="button" class="btn-secondary stream-option${mine === String(idx) ? ' active-selection' : ''}" data-stream-choice="${idx}"><span>${esc(option)}</span> <span>${stats}</span></button>`;
+      }).join('') + '</div>';
+    } else if (type === 'wordStorm') {
+      if (!result) html += form('wordstorm-input', 'Enter a word for this category', 'Send', mine);
+      html += wordList(players, choices);
+    } else if (result) {
+      const found = players.find(p => p.id === prompt.spyId);
+      html += `<div class="gv-locked"><p class="gv-note">The spy was</p><h3>${esc(found?.name || 'Unknown')}</h3>
+        <p class="gv-note">Civilian: ${esc(prompt.commonWord)} · Spy: ${esc(prompt.spyWord)}</p></div>`;
+    } else {
+      html += `<div class="gv-target">Your secret word: <b>${esc(prompt.assignments?.[app.myUid] || '???')}</b></div>`;
+      if (clues) {
+        html += form('spy-input', 'Give a one-word clue', 'Submit clue', mine) + wordList(players, choices);
+      } else {
+        html += wordList(players, prompt.clues || {});
+        html += '<h3 class="gv-center">Vote for the spy</h3><div class="gv-host">' + players.map(p =>
+          `<button type="button" class="btn-secondary${mine === p.id ? ' active-selection' : ''}" data-stream-choice="${esc(p.id)}">${esc(p.name)}</button>`
+        ).join('') + '</div>';
+      }
+    }
+
+    if (app.isHost) {
+      html += '<div class="gv-host">';
+      if (!result) {
+        html += clues
+          ? '<button type="button" class="btn-primary" id="spy-vote">Start voting</button>'
+          : '<button type="button" class="btn-primary" id="stream-reveal">Force reveal</button>';
+      }
+      html += `<button type="button" class="btn-secondary" id="stream-next">${result ? 'Next round' : 'Skip'}</button>
+        <button type="button" class="btn-secondary" id="stream-lobby">Back to lobby</button></div>`;
+    } else if (result) {
+      html += '<p class="gv-note gv-center">Waiting for the next round…</p>';
+    }
+    el.innerHTML = html + '</div>';
+    el.querySelectorAll('[data-stream-choice]').forEach(b => {
+      b.addEventListener('click', () => app.submitChoice(b.dataset.streamChoice));
+    });
+    el.querySelector('#stream-lobby')?.addEventListener('click', () => app.hostReturnToLobby());
+    el.querySelector('#stream-next')?.addEventListener('click', () => app.hostNextRound());
+    el.querySelector('#stream-reveal')?.addEventListener('click', () => app.forceRevealResults());
+    el.querySelector('#spy-vote')?.addEventListener('click', () => {
+      app.updateRoomState({ current_prompt: { ...prompt, stage: 'VOTING', clues: choices }, choices: {} });
+    });
+    el.querySelector('#stream-entry')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const word = event.currentTarget.querySelector('input').value.trim();
+      if (word) app.submitChoice(word);
+    });
+  }
+
+  window.StreamGames = { isStream, buildPrompt, render };
 })();
-
-
-
-
-
-
