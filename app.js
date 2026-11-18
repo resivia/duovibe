@@ -2,7 +2,7 @@
    DuoVibe app core
 
    Data layer: supabase-lite.js (window.SB), not the full Supabase SDK.
-   Identity : anonymous auth user id when available, local id otherwise.
+   Identity : project-scoped Supabase guest session.
    Sync     : adaptive polling that pauses when the tab is hidden, so a
               phone left in a pocket is not burning battery or data.
    ═══════════════════════════════════════════════════════════════════ */
@@ -11,7 +11,15 @@ const db = window.SB;
 const POLL_PLAYING = 900;    // ms between polls while a game is live
 const POLL_IDLE = 2000;      // ms between polls in the lobby / results
 const POLL_MAX = 8000;       // backoff ceiling after repeated failures
-const ROOM_COLS = 'id,host_id,state,game_type,round,current_prompt,choices,players,streak';
+const ROOM_CODE = /^[A-HJ-NP-Z2-9]{6}$/;
+
+function profileValue(key) {
+  try { return localStorage.getItem(key) || ''; } catch (e) { return ''; }
+}
+
+function saveProfileValue(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) {}
+}
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
@@ -20,6 +28,8 @@ function esc(s) {
 }
 
 const GAME_CARDS = [
+  { id: 'postcards',     title: 'Postcards',           desc: 'Trade a tiny piece of your day', starter: true },
+  { id: 'storyRelay',    title: 'Story Relay',         desc: 'Make up a story in four lines', starter: true },
   { id: 'wouldRather',   title: 'Would You Rather',    desc: 'Option A vs B' },
   { id: 'truthOrDare',   title: 'Truth or Dare',       desc: 'LDR truths & dares' },
   { id: 'mindMeld',      title: 'Mind Meld',           desc: 'Exact word match' },
@@ -39,43 +49,38 @@ const GAME_CARDS = [
   { id: 'nhie',          title: 'Never Have I Ever',   desc: 'Confess, then compare' }
 ];
 
-function gameCardsHtml() {
-  return GAME_CARDS.map(g =>
-    `<div class="game-card" data-game="${g.id}" onclick="window.App.${g.draft ? 'hostStartDrafting' : 'hostLaunchGame'}('${g.id}')">` +
-    `<div class="game-icon">${window.Icons ? window.Icons.svg(g.id, 26) : ''}</div>` +
-    `<div class="game-title">${g.title}</div><div class="game-desc">${g.desc}</div></div>`
+function gameCardsHtml(cards, ready) {
+  return cards.map(g =>
+    `<button type="button" class="game-card" data-game="${g.id}" ${ready ? '' : 'disabled'} onclick="window.App.hostLaunchGame('${g.id}')">` +
+    `<span class="game-icon">${window.Icons ? window.Icons.svg(g.id, 26) : ''}</span>` +
+    `<span class="game-title">${g.title}</span><span class="game-desc">${g.desc}</span></button>`
   ).join('');
 }
 
 class DuoVibeApp {
   constructor() {
     this.myUid = '';
-    this.myName = localStorage.getItem('duovibe_name') || '';
-    this.myAvatar = localStorage.getItem('duovibe_avatar') || '';
-
+    this.myName = profileValue('duovibe_name');
+    this.myAvatar = profileValue('duovibe_avatar');
     this.roomId = null;
     this.isHost = false;
     this.roomData = null;
-    this.blindRankSelections = [null, null, null, null, null];
-    this.blindRankStep = 0;
+    this.resetBlindRank();
     this._timer = null;
     this._busy = false;
     this._failures = 0;
     this._hash = '';
-    this._rpcOff = false;
   }
 
-  /* Called once on DOMContentLoaded, after the auth handshake */
-  async boot() {
-    db.configure(SUPABASE_URL, SUPABASE_ANON_KEY);
-    try {
-      const session = await db.init();
-      this.myUid = session.uid;
-    } catch (err) {
-      console.error('[DuoVibe] auth boot failed', err);
-      this.myUid = 'local_' + Math.random().toString(36).slice(2, 11);
-    }
+  boot() {
+    const { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } = window.SUPABASE_CONFIG;
+    db.configure(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     this.init();
+  }
+
+  resetBlindRank() {
+    this.blindRankSelections = [null, null, null, null, null];
+    this.blindRankStep = 0;
   }
 
   init() {
@@ -84,7 +89,7 @@ class DuoVibeApp {
     const roomParam = new URLSearchParams(location.search).get('room');
     if (roomParam) {
       const input = document.getElementById('join-room-code');
-      if (input) input.value = roomParam.toUpperCase();
+      if (input) input.value = roomParam.trim().toUpperCase().slice(0, 6);
       const nameInput = document.getElementById('player-name-input');
       if (nameInput) nameInput.focus();
     }
@@ -98,7 +103,8 @@ class DuoVibeApp {
       }
     });
 
-    window.addEventListener('online', () => { if (this.roomId) this._schedulePoll(0); });
+    window.addEventListener('online', () => this._schedulePoll(0));
+    window.addEventListener('pageshow', () => this._schedulePoll(0));
     window.addEventListener('pagehide', () => this._stopPolling());
   }
 
@@ -111,18 +117,11 @@ class DuoVibeApp {
       nameInput.value = this.myName;
       nameInput.addEventListener('input', e => {
         this.myName = e.target.value.trim();
-        localStorage.setItem('duovibe_name', this.myName);
+        saveProfileValue('duovibe_name', this.myName);
       });
     }
     this.renderAvatarPicker();
-    const avShuffle = document.getElementById('btn-av-shuffle');
-    if (avShuffle) avShuffle.addEventListener('click', () => {
-      const set = (window.Avatars ? window.Avatars.set : []);
-      if (!set.length) return;
-      let pick = set[Math.floor(Math.random() * set.length)];
-      if (pick === this.myAvatar && set.length > 1) pick = set[(set.indexOf(pick) + 1) % set.length];
-      this.setMyAvatar(pick);
-    });
+    document.getElementById('btn-av-shuffle')?.addEventListener('click', () => this.shuffleMyAvatar());
 
     if (createBtn) createBtn.addEventListener('click', () => this.handleCreateRoom());
     if (joinBtn) joinBtn.addEventListener('click', () => this.handleJoinRoom());
@@ -134,21 +133,32 @@ class DuoVibeApp {
   /* ── avatar ───────────────────────────────────────────────────── */
 
   myEmoji() {
-    if (this.myAvatar) return this.myAvatar;
-    if (window.Avatars) return window.Avatars.fallback(this.myName || this.myUid || 'duovibe');
-    return '🙂';
+    if (window.Avatars?.isValid(this.myAvatar)) return this.myAvatar;
+    return window.Avatars?.fallback(this.myName || this.myUid || 'duovibe') || '🙂';
   }
 
-  setMyAvatar(emoji) {
-    if (!emoji) return;
-    this.myAvatar = emoji;
-    try { localStorage.setItem('duovibe_avatar', emoji); } catch (e) {}
-    this.renderAvatarPicker();
+  shuffleMyAvatar() {
+    const set = window.Avatars?.set || [];
+    const current = this.roomData?.players?.find(p => p.id === this.myUid)?.emoji || this.myEmoji();
+    const options = set.filter(emoji => emoji !== current);
+    return this.setMyAvatar(options[Math.floor(Math.random() * options.length)]);
+  }
+
+  async setMyAvatar(emoji) {
+    if (!window.Avatars?.isValid(emoji) || this._avatarWrite || this._leaving) return;
     if (this.roomId) {
-      this._pushAvatarToRoom(emoji);
-      this._hash = '';
-      this.renderScreen();
+      const code = this.roomId;
+      this._avatarWrite = true;
+      try {
+        const result = await db.rpc('dv_set_avatar', { p_code: code, p_emoji: emoji });
+        if (!this._applyWrite(code, result, 'Could not change your icon')) return;
+      } finally {
+        this._avatarWrite = false;
+      }
     }
+    this.myAvatar = emoji;
+    saveProfileValue('duovibe_avatar', emoji);
+    this.renderAvatarPicker();
   }
 
   renderAvatarPicker() {
@@ -163,139 +173,98 @@ class DuoVibeApp {
     });
   }
 
-  /* dv_create_room / dv_join_room build the players JSON server-side and
-     do not know about emoji, so we patch our own entry right after the
-     room exists. One extra PATCH, and the avatar survives every later
-     read because players is written back verbatim. */
-  async _ensureAvatar() {
-    if (!this.roomId || !this.roomData) return;
-    const players = this.roomData.players || [];
-    const me = players.find(p => p.id === this.myUid);
-    if (!me) return;
-    const mine = this.myEmoji();
-    if (me.emoji === mine) return;
-    await this._pushAvatarToRoom(mine);
-  }
-
-  /* Write our emoji into the room's players array (read-modify-write,
-     same pattern as the join fallback). */
-  async _pushAvatarToRoom(emoji) {
-    if (!this.roomId) return;
-    const players = (this.roomData && this.roomData.players ? this.roomData.players.slice() : []);
-    const at = players.findIndex(p => p.id === this.myUid);
-    if (at < 0) return;
-    if (players[at].emoji === emoji) return;
-    players[at].emoji = emoji;
-    this.roomData = Object.assign({}, this.roomData, { players: players });
-    const upd = await db.from('rooms').update({ players: players }).eq('id', this.roomId);
-    if (upd && upd.error) console.warn('[DuoVibe] avatar save failed', upd.error.message);
-  }
-
   /* ── room lifecycle ───────────────────────────────────────────── */
 
-  generateRoomCode() { return String(Math.floor(1000 + Math.random() * 9000)); }
-
-  async handleCreateRoom() {
-    const name = (document.getElementById('player-name-input')?.value.trim()) || this.myName || 'Host';
-    this.myName = name;
-    localStorage.setItem('duovibe_name', name);
-
-    let room = null;
-
-    /* Preferred path: one atomic call that picks a free code and inserts */
-    let r = await this._rpc('dv_create_room', { p_name: name, p_uid: this.myUid });
-    if (!r.error && Array.isArray(r.data) && r.data[0]) room = r.data[0];
-    else if (!r.error && r.data && r.data.id) room = r.data;
-
-    /* Fallback for a database that has not had the RPC installed */
-    if (!room) {
-      for (let attempt = 0; attempt < 6 && !room; attempt++) {
-        const code = this.generateRoomCode();
-        const res = await db.from('rooms').insert([{
-          id: code, host_id: this.myUid, host_name: name,
-          players: [{ id: this.myUid, name: name, role: 'host', emoji: this.myEmoji() }],
-          state: 'LOBBY', game_type: null, current_prompt: null,
-          choices: {}, streak: 0, round: 1
-        }]).select().single();
-        if (!res.error) room = res.data;
-        else if (!/duplicate|unique|already exists/i.test(res.error.message || '')) {
-          alert('Could not create room: ' + res.error.message);
-          return;
-        }
-      }
-    }
-
-    if (!room) { alert('Could not create a room. Check your connection and try again.'); return; }
-
-    this.roomId = room.id;
-    this.isHost = true;
-    this.roomData = room;
-    this._hash = '';
-    await this._ensureAvatar();
-    this.startPolling();
-    this.renderScreen();
+  showMessage(text) {
+    document.getElementById('app-status').textContent = text;
   }
 
-  async handleJoinRoom() {
-    const name = (document.getElementById('player-name-input')?.value.trim()) || this.myName || 'Player';
-    const code = (document.getElementById('join-room-code')?.value.trim() || '').toUpperCase();
-    if (!code) { alert('Enter a 4-digit room code.'); return; }
+  _roomError(action, error) {
+    if (error.code === 'session_expired') {
+      this._exitRoom(error.message);
+    } else if (error.code === 'anonymous_provider_disabled' || error.code === 'signup_disabled' ||
+               /anonymous sign.ins (are )?disabled/i.test(error.message || '')) {
+      this.showMessage('Guest sign-in is not enabled on the room server yet.');
+    } else if (error.code === 'PGRST202' || error.code === 'PGRST205') {
+      this.showMessage('The room server is not ready. Please try again later.');
+    } else {
+      this.showMessage(action + ': ' + (error.message || 'Please try again.'));
+    }
+  }
+
+  handleCreateRoom() { return this._enterRoom(); }
+
+  handleJoinRoom() {
+    if (this.roomId || this._entering) return;
+    const field = document.getElementById('join-room-code');
+    const code = field.value.trim().toUpperCase();
+    if (!ROOM_CODE.test(code)) {
+      this.showMessage('Enter the six-character code from your partner’s invite.');
+      field.focus();
+      return;
+    }
+    return this._enterRoom(code);
+  }
+
+  async _enterRoom(code) {
+    if (this.roomId || this._entering) return;
+    this._entering = true;
+    const controls = [document.getElementById('btn-create-room'), document.getElementById('btn-join-room')];
+    controls.forEach(button => { button.disabled = true; });
+    this.showMessage(code ? 'Joining your partner…' : 'Creating your room…');
+    const name = document.getElementById('player-name-input').value.trim() || (code ? 'Player' : 'Host');
     this.myName = name;
-    localStorage.setItem('duovibe_name', name);
-
-    let room = null;
-
-    let r = await this._rpc('dv_join_room', { p_code: code, p_name: name, p_uid: this.myUid });
-    if (!r.error && Array.isArray(r.data) && r.data[0]) room = r.data[0];
-    else if (!r.error && r.data && r.data.id) room = r.data;
-
-    if (!room) {
-      /* Fallback: read, merge, write */
-      const res = await db.from('rooms').select(ROOM_COLS).eq('id', code).single();
-      if (res.error || !res.data) {
-        alert(r.error && r.error.message ? 'Could not join: ' + r.error.message : 'Room not found! Check the code.');
+    saveProfileValue('duovibe_name', name);
+    try {
+      const session = await db.init();
+      if (session.error) {
+        this._roomError('Could not sign in as a guest', session.error);
         return;
       }
-      const players = res.data.players || [];
-      const at = players.findIndex(p => p.id === this.myUid);
-      if (at >= 0) players[at].name = name;
-      else players.push({ id: this.myUid, name: name, role: 'player', emoji: this.myEmoji() });
-      const upd = await db.from('rooms').update({ players }).eq('id', code).select().single();
-      room = upd.data || res.data;
+      this.myUid = session.uid;
+      const args = { p_name: name, p_emoji: this.myEmoji() };
+      if (code) args.p_code = code;
+      const { data, error } = await db.rpc(code ? 'dv_join_room' : 'dv_create_room', args);
+      if (error || !data?.[0]?.id) {
+        this._roomError(code ? 'Could not join room' : 'Could not create room', error || {});
+        return;
+      }
+      this.roomId = data[0].id;
+      this.roomData = null;
+      this._hash = '';
+      this.showMessage('');
+      this.syncStateWithDB(data[0]);
+      this.startPolling();
+    } finally {
+      this._entering = false;
+      controls.forEach(button => { button.disabled = false; });
     }
-
-    this.roomId = code;
-    this.isHost = (room.host_id === this.myUid);
-    this.roomData = room;
-    this._hash = '';
-    await this._ensureAvatar();
-    this.startPolling();
-    this.renderScreen();
   }
 
   async leaveRoom() {
-    if (this.roomId) {
-      const r = await this._rpc('dv_leave_room', { p_code: this.roomId, p_uid: this.myUid });
-      if (r.error) {
-        /* Fallback: drop ourselves from players, delete the room if empty */
-        const res = await db.from('rooms').select('players').eq('id', this.roomId).single();
-        const rest = ((res.data && res.data.players) || []).filter(p => p.id !== this.myUid);
-        if (rest.length === 0) await db.from('rooms').delete().eq('id', this.roomId);
-        else await db.from('rooms').update({ players: rest }).eq('id', this.roomId);
-      }
+    if (!this.roomId || this._leaving) return;
+    this._leaving = true;
+    const code = this.roomId;
+    try {
+      const { error } = await db.rpc('dv_leave_room', { p_code: code });
+      if (code !== this.roomId) return;
+      if (error) this._roomError('Could not leave room', error);
+      else this._exitRoom();
+    } finally {
+      this._leaving = false;
     }
+  }
 
+  _exitRoom(message = '') {
     this._stopPolling();
     this.roomId = null;
     this.roomData = null;
     this.isHost = false;
     this._hash = '';
-
-    document.body.classList.remove('in-game');
-    const landing = document.getElementById('landing-view');
-    const gameView = document.getElementById('game-view');
-    if (landing) landing.style.display = 'block';
-    if (gameView) { gameView.style.display = 'none'; gameView.innerHTML = ''; }
+    this.resetBlindRank();
+    document.getElementById('game-view').replaceChildren();
+    this.renderScreen();
+    this.showMessage(message);
   }
 
   /* ── polling ──────────────────────────────────────────────────── */
@@ -308,10 +277,11 @@ class DuoVibeApp {
 
   _schedulePoll(delay) {
     if (this._timer) clearTimeout(this._timer);
+    if (!this.roomId || document.visibilityState === 'hidden') return;
     const wait = delay === undefined ? this._interval() : delay;
     this._timer = setTimeout(async () => {
       await this.pollDB();
-      if (this.roomId) this._schedulePoll();
+      this._schedulePoll();
     }, wait);
   }
 
@@ -326,61 +296,47 @@ class DuoVibeApp {
   }
 
   async pollDB() {
-    if (!this.roomId || this._busy) return;
-    if (document.visibilityState === 'hidden') return;
-
+    if (!this.roomId || this._busy || document.visibilityState === 'hidden') return;
     this._busy = true;
+    const code = this.roomId;
     try {
-      const { data, error } = await db.from('rooms').select(ROOM_COLS).eq('id', this.roomId).single();
-      if (error) {
-        /* Row gone: the host left or the room was cleaned up */
-        if (error.status === 406 || /No matching row/.test(error.message || '')) {
-          this._stopPolling();
-          this.roomId = null;
-          this.roomData = null;
-          const landing = document.getElementById('landing-view');
-          const gameView = document.getElementById('game-view');
-          if (landing) landing.style.display = 'block';
-          if (gameView) { gameView.style.display = 'none'; gameView.innerHTML = ''; }
-          alert('That room has closed.');
-          return;
-        }
+      const { data, error } = await db.getRoom(code);
+      if (this.roomId !== code) return;
+      if (error?.code === 'session_expired') {
+        this._exitRoom(error.message);
+      } else if (error) {
         this._failures = Math.min(this._failures + 1, 4);
-        return;
+        if (this._failures === 2) this.showMessage('Connection interrupted. Trying to reconnect…');
+      } else if (!data) {
+        this._exitRoom('That room has closed or expired. Ask your partner for a new invite.');
+      } else {
+        if (this._failures >= 2) this.showMessage('');
+        this._failures = 0;
+        this.syncStateWithDB(data);
       }
-      this._failures = 0;
-      if (data) this.syncStateWithDB(data);
-    } catch (err) {
-      this._failures = Math.min(this._failures + 1, 4);
     } finally {
       this._busy = false;
     }
   }
 
   syncStateWithDB(remote) {
-    if (!this.roomData) {
-      this.roomData = remote;
-      this._hash = '';
-      this.renderScreen();
-      return;
-    }
-    this.isHost = (remote.host_id === this.myUid);
+    if (remote.id !== this.roomId || remote.revision < this.roomData?.revision) return;
+    if (remote.turn_token !== this.roomData?.turn_token) this.resetBlindRank();
+    this.isHost = remote.host_id === this.myUid;
     this.roomData = remote;
     this.renderScreen();
   }
 
-  /* RPC availability. A database that has not had the new SQL applied
-     answers 404 / PGRST202 for every dv_* call; remember that once and go
-     straight to the table fallbacks instead of firing a doomed request on
-     every action. */
-  async _rpc(name, args) {
-    if (this._rpcOff) return { data: null, error: { message: 'rpc disabled', offline: true } };
-    const r = await db.rpc(name, args);
-    if (r.error && (r.error.status === 404 || /does not exist|PGRST202/i.test(r.error.message || ''))) {
-      this._rpcOff = true;
-      console.warn('[DuoVibe] dv_* functions not installed; using table fallbacks.');
+  _applyWrite(code, { data, error }, action) {
+    if (code !== this.roomId) return false;
+    if (error || !data?.[0]?.id) {
+      this._roomError(action, error || {});
+      if (error?.code === 'PT409' || error?.code === 'P0002' || !error?.status) this._schedulePoll(0);
+      return false;
     }
-    return r;
+    this.showMessage('');
+    this.syncStateWithDB(data[0]);
+    return true;
   }
 
   /* ── gameplay writes ──────────────────────────────────────────── */
@@ -396,166 +352,204 @@ class DuoVibeApp {
   }
 
   async submitChoice(choiceValue) {
-    if (!this.roomId) return;
-    this._tick();
-    this._optimisticChoice(choiceValue);
-
-    /* Atomic server-side write: no read-modify-write race with the partner */
-    const r = await this._rpc('dv_set_choice', { p_code: this.roomId, p_choice: String(choiceValue), p_uid: this.myUid });
-    if (!r.error) {
-      const row = Array.isArray(r.data) ? r.data[0] : r.data;
-      if (row && row.id) { this.roomData = row; this.renderScreen(); }
-      return;
+    if (!this.roomId || this.roomData?.state !== 'PLAYING' || this._leaving) return false;
+    const { id, turn_token: turn } = this.roomData;
+    if (this._choiceWrite === turn) return false;
+    this._choiceWrite = turn;
+    try {
+      // Only the server-confirmed answer is used for scoring or other writes.
+      const result = await db.rpc('dv_set_choice', { p_code: id, p_choice: String(choiceValue), p_turn: turn });
+      const accepted = this._applyWrite(id, result, 'Could not send your answer');
+      if (accepted) this._tick();
+      return accepted;
+    } finally {
+      if (this._choiceWrite === turn) this._choiceWrite = null;
     }
-
-    /* Fallback for a database without the RPC */
-    const fresh = await db.from('rooms').select('choices').eq('id', this.roomId).single();
-    const choices = (fresh.data && fresh.data.choices) || (this.roomData.choices || {});
-    choices[this.myUid] = choiceValue;
-    const upd = await db.from('rooms').update({ choices }).eq('id', this.roomId).select().single();
-    if (upd.data) { this.roomData = upd.data; this.renderScreen(); }
-  }
-
-  /* Paint the pick instantly, before the network answers */
-  _optimisticChoice(value) {
-    if (!this.roomData) return;
-    this.roomData = Object.assign({}, this.roomData, {
-      choices: Object.assign({}, this.roomData.choices || {}, { [this.myUid]: value })
-    });
-    this.renderScreen();
   }
 
   async hostStartDrafting(gameType) {
-    if (!this.isHost) return;
+    if (!this.isHost || this.roomData.players.length !== 2) return;
     await this.updateRoomState({ state: 'DRAFTING', game_type: gameType, choices: {} });
   }
 
-  async hostLaunchGame(gameType, customPrompt = null) {
-    if (!this.isHost) return;
-
-    let prompt = customPrompt;
-    if (!prompt) {
-      prompt = (window.MiniGames && window.MiniGames.isMini(gameType))
-        ? window.MiniGames.buildPrompt(gameType, {})
-        : (window.PartyGames && window.PartyGames.isParty(gameType))
-          ? window.PartyGames.buildPrompt(gameType, this.roomData.players || [], {})
-          : (window.SocialGames && window.SocialGames.isSocial(gameType))
-            ? window.SocialGames.buildPrompt(gameType, this.roomData.players || [], {}, this.roomId)
-            : (window.Picker ? window.Picker.nextItem(gameType, this.roomId) : { question: 'Default question' });
+  _buildPrompt(type, next = false) {
+    const { players, id } = this.roomData;
+    if (window.StreamGames?.isStream(type)) return window.StreamGames.buildPrompt(type, players, id);
+    if (window.DuoGames?.isDuo(type)) return window.DuoGames.buildPrompt(type, id);
+    if (window.MiniGames?.isMini(type)) {
+      return next ? window.MiniGames.nextRoundPrompt(this, type) : window.MiniGames.buildPrompt(type, {});
     }
+    if (window.PartyGames?.isParty(type)) {
+      return next ? window.PartyGames.nextRoundPrompt(this, type) : window.PartyGames.buildPrompt(type, players, {}, 1, id);
+    }
+    if (window.SocialGames?.isSocial(type)) {
+      return next ? window.SocialGames.nextRoundPrompt(this, type) : window.SocialGames.buildPrompt(type, players, {}, id);
+    }
+    return window.Picker?.nextItem(type, id);
+  }
 
+  hostLaunchGame(gameType, customPrompt = null) {
+    if (!this.isHost || this.roomData.players.length !== 2 || this._stateWrite === this.roomData.turn_token) return;
+    let prompt = customPrompt || this._buildPrompt(gameType);
     if (typeof prompt === 'string') {
-      const v = prompt;
-      if (gameType === 'secretGuess') {
-        prompt = { items: window.Picker.get50Items(), target: v, question: 'Guess the secret: ' + v, title: 'Mastermind' };
-      } else {
-        prompt = { question: v, topic: v, scenario: v, title: v };
-      }
+      prompt = gameType === 'secretGuess'
+        ? { items: window.Picker.get50Items(), target: prompt, question: 'Guess the secret word', title: 'Mastermind' }
+        : { question: prompt, topic: prompt };
     }
-
-    this.blindRankSelections = [null, null, null, null, null];
-    this.blindRankStep = 0;
-
-    await this.updateRoomState({
-      state: 'PLAYING', game_type: gameType, current_prompt: prompt, choices: {}, round: 1
+    return this.updateRoomState({
+      state: 'PLAYING', game_type: gameType, current_prompt: prompt, choices: {}, round: 1, streak: 0
     });
   }
 
-  async hostNextRound() {
-    if (!this.isHost) return;
-    const gameType = this.roomData.game_type;
-    const prompt = (window.MiniGames && window.MiniGames.isMini(gameType))
-      ? window.MiniGames.nextRoundPrompt(this, gameType)
-      : (window.PartyGames && window.PartyGames.isParty(gameType))
-        ? window.PartyGames.nextRoundPrompt(this, gameType)
-        : (window.SocialGames && window.SocialGames.isSocial(gameType))
-          ? window.SocialGames.nextRoundPrompt(this, gameType)
-          : (window.Picker ? window.Picker.nextItem(gameType, this.roomId) : null);
-    this.blindRankSelections = [null, null, null, null, null];
-    this.blindRankStep = 0;
-    await this.updateRoomState({
-      state: 'PLAYING',
-      round: (this.roomData.round || 1) + 1,
-      current_prompt: prompt,
-      choices: {}
+  hostNextRound() {
+    if (!this.isHost || this.roomData.players.length !== 2 || this._stateWrite === this.roomData.turn_token) return;
+    return this.updateRoomState({
+      state: 'PLAYING', round: this.roomData.round + 1,
+      current_prompt: this._buildPrompt(this.roomData.game_type, true), choices: {}
     });
   }
 
   async updateRoomState(updates) {
-    if (!this.isHost || !this.roomId) return;
-
-    /* Atomic host write; the function itself re-checks host_id server-side */
-    const r = await this._rpc('dv_set_state', { p_code: this.roomId, p_state: updates, p_uid: this.myUid });
-    const row = Array.isArray(r.data) ? r.data[0] : r.data;
-    if (!r.error && row && row.id) { this.roomData = row; this.renderScreen(); return; }
-
-    /* Fallback for a database without the RPC */
-    const { data, error } = await db.from('rooms').update(updates).eq('id', this.roomId).select().single();
-    if (error) { console.error('Room update error:', error); return; }
-    if (data) { this.roomData = data; this.renderScreen(); }
+    if (!this.isHost || !this.roomId || this._leaving) return false;
+    const { id, turn_token: turn } = this.roomData;
+    if (this._stateWrite === turn) return false;
+    this._stateWrite = turn;
+    let result;
+    try {
+      result = await db.rpc('dv_set_state', { p_code: id, p_state: updates, p_turn: turn });
+    } finally {
+      if (this._stateWrite === turn) this._stateWrite = null;
+    }
+    return this._applyWrite(id, result, 'Could not update the game');
   }
 
-  async hostReturnToLobby() {
+  hostReturnToLobby() {
+    return this.updateRoomState({ state: 'LOBBY', game_type: null, current_prompt: null, choices: {}, round: 1, streak: 0 });
+  }
+
+  forceRevealResults() {
     if (!this.isHost) return;
-    await this.updateRoomState({ state: 'LOBBY', game_type: null, current_prompt: null, choices: {} });
+    if (this._isMini() || this._isStream()) return this.updateRoomState({ state: 'COMPARISON' });
+    return this._settleClassicRound(this._classicResult());
   }
 
-  async forceRevealResults() { return this.updateRoomState({ state: 'COMPARISON' }); }
+  _isMini() { return window.MiniGames?.isMini(this.roomData.game_type); }
+  _isParty() { return window.PartyGames?.isParty(this.roomData.game_type); }
+  _isSocial() { return window.SocialGames?.isSocial(this.roomData.game_type); }
+  _isDuo() { return window.DuoGames?.isDuo(this.roomData.game_type); }
+  _isStream() { return window.StreamGames?.isStream(this.roomData.game_type); }
 
-  async updateStreak(newStreak) {
-    if (!this.isHost || !this.roomId) return;
-    await db.from('rooms').update({ streak: newStreak }).eq('id', this.roomId);
+  checkAllAnswered() {
+    const players = this.roomData.players || [];
+    const choices = this.roomData.choices || {};
+    return players.length === 2 && players.every(player => Object.hasOwn(choices, player.id));
   }
 
-_isMini(){return !!(window.MiniGames&&window.MiniGames.isMini(this.roomData&&this.roomData.game_type));}
-_isParty(){return !!(window.PartyGames&&window.PartyGames.isParty(this.roomData&&this.roomData.game_type));}
-_isSocial(){return !!(window.SocialGames&&window.SocialGames.isSocial(this.roomData&&this.roomData.game_type));}
-_renderMini(el){
- if(this.roomData.state==='COMPARISON'&&window.MiniGames.renderForcedResult(this,el))return;
- window.MiniGames.render(this,el);
-}
-checkAllAnswered(){
- if(!this.roomData||!this.roomData.choices)return false;const players=this.roomData.players||[];const choices=this.roomData.choices;const count=Object.keys(choices).length;
- if(players.length<=1)return count>=1;return count>=players.length;
-}
-renderScreen(){
- const landing=document.getElementById('landing-view');const gameView=document.getElementById('game-view');
- if(!this.roomId||!this.roomData){document.body.classList.remove('in-game');if(landing)landing.style.display='block';if(gameView)gameView.style.display='none';return;}
- if(landing)landing.style.display='none';if(gameView)gameView.style.display='block';
- document.body.classList.add('in-game');
- const state=this.roomData.state||'LOBBY';
- const sig=JSON.stringify([state,this.roomData.game_type,this.roomData.round,this.roomData.current_prompt,this.roomData.choices,(this.roomData.players||[]).map(p=>p.id+'~'+p.name).join('|'),this.roomData.streak,this.blindRankStep,this.blindRankSelections]);
- if(sig===this._hash)return;
- this._hash=sig;
- if(state==='LOBBY')this.renderLobby(gameView);
- else if(state==='DRAFTING')this.renderDrafting(gameView);
- else if(state==='PLAYING'){if(this._isMini())this._renderMini(gameView);else if(this._isParty())window.PartyGames.render(this,gameView);else if(this._isSocial())window.SocialGames.render(this,gameView);else if(this.checkAllAnswered())this.renderComparison(gameView);else this.renderActiveGame(gameView);}
- else if(state==='COMPARISON'){if(this._isMini())this._renderMini(gameView);else if(this._isParty())window.PartyGames.render(this,gameView);else if(this._isSocial())window.SocialGames.render(this,gameView);else this.renderComparison(gameView);}
-}
+  renderScreen() {
+    const landing = document.getElementById('landing-view');
+    const gameView = document.getElementById('game-view');
+    const data = this.roomData;
+    document.body.classList.toggle('in-game', !!data);
+    landing.style.display = data ? 'none' : 'block';
+    gameView.style.display = data ? 'block' : 'none';
+    if (!data) return;
+
+    const state = data.state;
+    const sig = JSON.stringify([data.id, state, data.turn_token, data.game_type, data.round,
+      data.current_prompt, data.choices, data.players, data.streak, this.blindRankStep, this.blindRankSelections]);
+    if (sig === this._hash) return;
+    this._hash = sig;
+
+    // A partner locking in must not erase the answer you are still typing.
+    const myChoice = data.choices?.[this.myUid];
+    const fields = this._renderedTurn === data.turn_token && this._renderedChoice === myChoice
+      ? [...gameView.querySelectorAll('textarea[id], input[type="text"][id]:not([readonly]), input[type="number"][id]')]
+      : [];
+    const drafts = fields.filter(el => el.value !== el.defaultValue || el === document.activeElement)
+      .map(el => ({ id: el.id, value: el.value, focus: el === document.activeElement,
+        start: el.selectionStart, end: el.selectionEnd }));
+    this._renderedTurn = data.turn_token;
+    this._renderedChoice = myChoice;
+
+    if (state === 'LOBBY') {
+      this._celebrated = '';
+      this.renderLobby(gameView);
+    }
+    else if (state === 'DRAFTING') this.renderDrafting(gameView);
+    else if (this._isDuo()) window.DuoGames.render(this, gameView);
+    else if (this._isStream()) window.StreamGames.render(this, gameView);
+    else if (this._isMini()) {
+      if (state !== 'COMPARISON') window.MiniGames.render(this, gameView);
+      else if (!window.MiniGames.renderForcedResult(this, gameView)) {
+        gameView.innerHTML = '<div class="glass-card gv"><h2 class="gv-q">Round ended</h2>' +
+          (this.isHost ? '<div class="gv-host"><button class="btn-primary" onclick="window.App.hostNextRound()">Next Round →</button>' +
+            '<button class="btn-secondary" onclick="window.App.hostReturnToLobby()">Change Game</button></div>'
+            : '<p class="gv-note gv-center">Waiting for the next round…</p>') + '</div>';
+      }
+    } else if (this._isParty()) window.PartyGames.render(this, gameView);
+    else if (this._isSocial()) window.SocialGames.render(this, gameView);
+    else if (state === 'COMPARISON' || this.checkAllAnswered()) this.renderComparison(gameView);
+    else this.renderActiveGame(gameView);
+
+    drafts.forEach(draft => {
+      const field = document.getElementById(draft.id);
+      if (!field) return;
+      field.value = draft.value;
+      if (draft.focus) {
+        field.focus({ preventScroll: true });
+        if (draft.start !== null) field.setSelectionRange(draft.start, draft.end);
+      }
+    });
+    gameView.querySelector('.room-leave')?.remove();
+    const canChange = this.isHost && state !== 'LOBBY' &&
+      !gameView.querySelector('[onclick*="hostReturnToLobby"], [data-duo-lobby], #stream-lobby');
+    gameView.insertAdjacentHTML('beforeend', '<div class="lb-foot room-leave">' +
+      (canChange ? '<button class="btn-secondary" onclick="window.App.hostReturnToLobby()">Change game</button>' : '') +
+      '<button class="btn-secondary" onclick="window.App.leaveRoom()">Leave room</button></div>');
+  }
+
 renderLobby(container){
   const players=this.roomData.players||[];
-  const shareUrl=`${window.location.origin}${window.location.pathname}?room=${this.roomId}`;
+  const shareUrl=`${location.origin}${location.pathname}?room=${encodeURIComponent(this.roomId)}`;
   let html='<div class="glass-card animate-fade lb">';
   html+='<div class="lb-head"><span class="badge-pill pulse">🔴 LIVE LOBBY</span>'
-    +'<h2 class="lb-code">Room <span>'+this.roomId+'</span></h2>'
+    +'<h2 class="lb-code">Room <span>'+esc(this.roomId)+'</span></h2>'
     +'<p class="lb-hint">Send this code to your partner</p>'
-    +'<button class="btn-secondary lb-copy" id="btn-copy-link">Copy invite link</button></div>';
+    +'<button class="btn-secondary lb-copy" id="btn-copy-link">Copy invite link</button>'
+    +'<input class="input-field lb-link" id="room-invite" type="text" readonly hidden aria-label="Invite link" value="'+esc(shareUrl)+'"></div>';
   html+='<div class="lb-players"><h3 class="lb-sub">Connected ('+players.length+')</h3><div class="lb-chips">'
     +players.map(p=>'<div class="badge-pill lb-chip '+(p.id===this.myUid?'active-player':'')+'">'
       +(window.Avatars?window.Avatars.html(p.emoji):'')+'<span>'+esc(p.name)+(p.id===this.myUid?' (you)':'')+'</span>'
       +(p.role==='host'?'<span class="lb-crown">👑</span>':'')+'</div>').join('')
-    +'</div></div>';
+    +'</div><button class="av-shuffle lb-shuffle" id="btn-lobby-icon">Shuffle my icon</button></div>';
   if(this.isHost){
-    html+='<div class="lb-games"><h3 class="lb-sub">Pick a game</h3><div class="game-selector-grid">'+gameCardsHtml()+'</div></div>';
+    const ready=players.length===2;
+    html+='<div class="lb-games"><h3 class="lb-sub">Start here</h3>'
+      +'<p class="gv-note lb-guide">'+(ready?'Just the two of you. No timer or camera needed.':'Share the invite to unlock the games.')+'</p>'
+      +'<div class="game-selector-grid">'+gameCardsHtml(GAME_CARDS.filter(g=>g.starter), ready)+'</div>'
+      +'<h3 class="lb-sub lb-more">More games</h3><div class="game-selector-grid">'+gameCardsHtml(GAME_CARDS.filter(g=>!g.starter), ready)+'</div></div>';
   }else{
     html+='<div class="lb-wait"><div class="spinner"></div><h3>Waiting for the host</h3>'
       +'<p class="gv-note">They are picking a game.</p></div>';
   }
-  html+='<div class="lb-foot"><button class="btn-secondary" onclick="window.App.leaveRoom()">Leave room</button></div>';
   html+='</div>';
   container.innerHTML=html;
   const copyBtn=document.getElementById('btn-copy-link');
-  if(copyBtn){copyBtn.addEventListener('click',()=>{navigator.clipboard.writeText(shareUrl);copyBtn.innerText='✓ Copied';setTimeout(()=>copyBtn.innerText='Copy invite link',2000);});}
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      copyBtn.textContent = '✓ Copied';
+      setTimeout(() => { copyBtn.textContent = 'Copy invite link'; }, 2000);
+    } catch (e) {
+      const input = container.querySelector('#room-invite');
+      if (!input) return;
+      input.hidden = false;
+      input.focus();
+      input.select();
+      this.showMessage('Copy the selected invite link to share it.');
+    }
+  });
+  container.querySelector('#btn-lobby-icon').addEventListener('click', () => this.shuffleMyAvatar());
 }
 renderDrafting(container){
   if(this.isHost){
@@ -666,9 +660,9 @@ _bindGameInput(gameType,prompt){
   root.querySelectorAll('[data-pick]').forEach(b=>{
     b.addEventListener('click',()=>{
       const v=b.getAttribute('data-pick');
-      if(v==='a')pick(prompt.optionA||'Option A');
-      else if(v==='b')pick(prompt.optionB||'Option B');
-      else if(v==='done')pick('DARE COMPLETED!');
+      if((gameType==='wouldRather'||gameType==='bucketList')&&v==='a')pick(prompt.optionA||'Option A');
+      else if((gameType==='wouldRather'||gameType==='bucketList')&&v==='b')pick(prompt.optionB||'Option B');
+      else if(gameType==='truthOrDare'&&v==='done')pick('DARE COMPLETED!');
       else pick(v);
     });
   });
@@ -700,8 +694,19 @@ _bindGameInput(gameType,prompt){
     if(go)go.addEventListener('click',()=>this.submitChoice(range.value));
   }
 }
-handleBlindRankSelect(slotIdx,itemText){this.blindRankSelections[slotIdx]=itemText;this.blindRankStep++;if(this.blindRankStep>=5){this.submitChoice(JSON.stringify(this.blindRankSelections));}else{this.renderScreen();}}
-renderComparison(container){
+async handleBlindRankSelect(slotIdx, itemText) {
+  const turn = this.roomData.turn_token;
+  if (this._choiceWrite === turn || this.blindRankSelections[slotIdx]) return;
+  this.blindRankSelections[slotIdx] = itemText;
+  if (this.blindRankStep === 4) {
+    const saved = await this.submitChoice(JSON.stringify(this.blindRankSelections));
+    if (!saved && this.roomData?.turn_token === turn) this.blindRankSelections[slotIdx] = null;
+  } else {
+    this.blindRankStep++;
+    this.renderScreen();
+  }
+}
+_classicResult(){
   const prompt=this.roomData.current_prompt||{};
   const gameType=this.roomData.game_type;
   const choices=this.roomData.choices||{};
@@ -717,13 +722,36 @@ renderComparison(container){
     else if(gameType==='secretGuess'){if(prompt.target){isMatch=(String(c1).toLowerCase()===String(prompt.target).toLowerCase()&&String(c2).toLowerCase()===String(prompt.target).toLowerCase());}else{isMatch=(String(c1).trim()===String(c2).trim());}}
     else if(gameType==='blindRank'){isMatch=(String(c1)===String(c2));}
   }
-  if(isMatch){document.body.classList.remove('dv-win');void document.body.offsetWidth;document.body.classList.add('dv-win');}
-  if(this.isHost&&!isMatch&&!prompt.penalty&&(this.roomData.streak||0)>=2){
-    const dare=window.Picker?window.Picker.nextItem('dares'):null;
-    const dareText=dare?(typeof dare==='string'?dare:(dare.text||dare.content||'')):'Do a funny dance!';
-    if(dareText){prompt.penalty=dareText;this.roomData.current_prompt=prompt;this.updateRoomState({current_prompt:prompt});}
+  return { prompt, gameType, p1, p2, c1, c2, isMatch };
+}
+
+_settleClassicRound({ prompt, isMatch }) {
+  if (this.roomData.state !== 'PLAYING') return;
+  const streak = this.roomData.streak || 0;
+  const nextPrompt = { ...prompt };
+  if (!isMatch && streak >= 2) {
+    const dare = window.Picker?.nextItem('dares', this.roomId);
+    nextPrompt.penalty = typeof dare === 'string' ? dare : dare?.text || dare?.content;
   }
-  if(this.isHost){const cur=this.roomData.streak||0;if(isMatch)this.updateStreak(cur+1);else this.updateStreak(0);}
+  if (this._stateWrite === this.roomData.turn_token) return;
+  const turn = this.roomData.turn_token;
+  return this.updateRoomState({
+    state: 'COMPARISON', current_prompt: nextPrompt, streak: isMatch ? streak + 1 : 0
+  }).then(saved => {
+    // The next poll may retry a result write interrupted by a mobile outage.
+    if (!saved && this.roomData?.turn_token === turn) this._hash = '';
+  });
+}
+
+renderComparison(container){
+  const result=this._classicResult();
+  const { prompt,gameType,p1,p2,c1,c2,isMatch }=result;
+  if(this.isHost && this.roomData.state==='PLAYING') this._settleClassicRound(result);
+  const key = `${this.roomId}:${gameType}:${this.roomData.round}`;
+  if(isMatch && this._celebrated !== key){
+    this._celebrated=key;
+    document.body.classList.remove('dv-win');void document.body.offsetWidth;document.body.classList.add('dv-win');
+  }
 
   let html='<div class="glass-card animate-fade gv">';
   html+='<div class="gv-top"><span class="badge-pill">ROUND '+(this.roomData.round||1)+'</span>'
@@ -762,4 +790,7 @@ _revealCard(name,value,isMatch,uid){
 }
 }
 window.DuoVibeApp=DuoVibeApp;
-window.addEventListener('DOMContentLoaded',()=>{window.App=new DuoVibeApp();window.App.boot().catch(err=>console.error('[DuoVibe] boot error',err));});
+window.addEventListener('DOMContentLoaded', () => {
+  window.App = new DuoVibeApp();
+  window.App.boot();
+});

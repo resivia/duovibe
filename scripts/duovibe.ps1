@@ -71,7 +71,8 @@ function Get-Node {
 }
 
 # ── project facts ────────────────────────────────────────────────────
-$JsFiles = @('app.js', 'banks.js', 'features.js', 'config.js', 'sw.js', 'supabase-lite.js')
+$JsFiles = @('app.js', 'banks.js', 'features.js', 'config.js', 'sw.js', 'supabase-lite.js',
+    'deck.js', 'icons.js', 'minigames.js', 'partygames.js', 'social.js', 'duogames.js')
 
 function Get-PayloadReport {
     param([string[]]$Files)
@@ -105,7 +106,7 @@ function Get-SupabaseConfig {
     if (-not (Test-Path 'config.js')) { return $null }
     $text = Get-Content 'config.js' -Raw
     $url = [regex]::Match($text, 'SUPABASE_URL\s*:\s*"([^"]+)"').Groups[1].Value
-    $key = [regex]::Match($text, 'SUPABASE_ANON_KEY\s*:\s*"([^"]+)"').Groups[1].Value
+    $key = [regex]::Match($text, 'SUPABASE_PUBLISHABLE_KEY\s*:\s*"([^"]+)"').Groups[1].Value
     if (-not $url -or -not $key) { return $null }
     return [pscustomobject]@{ Url = $url.TrimEnd('/'); Key = $key }
 }
@@ -115,18 +116,12 @@ function Test-AnonAuth {
     param($Config)
     if (-not $Config) { return 'unknown' }
     try {
-        $body = '{"data":{},"gotrue_meta_security":{}}'
-        $headers = @{ apikey = $Config.Key; Authorization = "Bearer $($Config.Key)" }
-        $resp = Invoke-WebRequest -Uri "$($Config.Url)/auth/v1/signup" -Method Post -Body $body `
-            -ContentType 'application/json' -Headers $headers -UseBasicParsing -TimeoutSec 15
-        if ($resp.StatusCode -eq 200) { return 'enabled' }
+        $settings = Invoke-RestMethod -Uri "$($Config.Url)/auth/v1/settings" `
+            -Headers @{ apikey = $Config.Key } -TimeoutSec 15
+        if ($settings.disable_signup -eq $true -or $settings.external.anonymous_users -eq $false) { return 'disabled' }
+        if ($settings.external.anonymous_users -eq $true) { return 'enabled' }
     }
-    catch {
-        $code = $null
-        if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
-        if ($code -eq 422) { return 'disabled' }
-        if ($code -eq 429) { return 'unknown' }
-    }
+    catch { return 'unknown' }
     return 'unknown'
 }
 
@@ -152,7 +147,7 @@ function Invoke-Doctor {
     if ($node) { Write-Ok "node     $(& $node --version)" } else { Write-Warn2 'node not found - only needed for `verify`' }
     if (Test-Tool python) { Write-Ok "python   $(python --version 2>&1)" }
     elseif (Test-Tool py) { Write-Ok "py       $(py --version 2>&1)" }
-    else { Write-Warn2 'python not found - `dev` will fall back to npx' }
+    else { Write-Warn2 'python not found - only needed to extract archived rooms' }
     if (Test-Tool psql) { Write-Ok "psql     $((psql --version) -join '')" } else { Write-Warn2 'psql not found - needed only for `sql`' }
 
     Write-Host ''
@@ -167,7 +162,7 @@ function Invoke-Doctor {
                 Write-Warn2 'anonymous sign-ins: DISABLED'
                 Write-Host '           Enable here: Authentication > Sign In / Providers > Anonymous sign-ins' -ForegroundColor Yellow
                 Write-Host "           https://supabase.com/dashboard/project/$ref/auth/providers" -ForegroundColor Yellow
-                Write-Host '           The app still works without them (anon-key mode).' -ForegroundColor DarkGray
+                Write-Host '           Create and Join require anonymous sign-ins.' -ForegroundColor DarkGray
             }
             default { Write-Warn2 'anonymous sign-ins: could not determine' }
         }
@@ -249,7 +244,7 @@ process.exit(bad ? 1 : 0);
     if ($index -match 'rel="manifest"') { Write-Ok 'PWA manifest linked' } else { Write-Fail 'PWA manifest not linked' }
 
     Write-Head 'Compressed payload'
-    $files = @('index.html', 'style.css', 'config.js', 'supabase-lite.js', 'banks.js', 'app.js', 'features.js', 'sw.js')
+    $files = @('index.html', 'style.css') + $JsFiles
     $gz = Get-PayloadReport -Files $files
     Write-Host ""
     if ($gz -lt 60000) { Write-Ok ("total gzip {0:N1} KB - under the 60 KB budget" -f ($gz / 1KB)) }
@@ -267,6 +262,8 @@ process.exit(bad ? 1 : 0);
 function Invoke-Dev {
     Write-Head 'Local server'
 
+    $node = Get-Node
+    if (-not $node) { Write-Fail 'Node.js is required for the static dev server'; exit 1 }
     $lan = $null
     try {
         if (Get-Command Get-NetIPAddress -ErrorAction SilentlyContinue) {
@@ -293,18 +290,10 @@ function Invoke-Dev {
     Write-Host '  press Ctrl+C to stop' -ForegroundColor DarkGray
     Write-Host ''
 
-    if (Test-Tool python) {
-        python -m http.server $Port --bind 0.0.0.0
-    }
-    elseif (Test-Tool py) {
-        py -m http.server $Port --bind 0.0.0.0
-    }
-    elseif ($node) {
-        npx --yes http-server . -p $Port -a 0.0.0.0 -c-1
-    }
-    else {
-        Write-Fail 'need python or node to serve files'
-    }
+    $env:HOST = '0.0.0.0'
+    $env:PORT = "$Port"
+    & $node tests/serve.js
+    exit $LASTEXITCODE
 }
 
 # ═════════════════════════════════════════════════════════════════════
@@ -340,12 +329,12 @@ function Invoke-Deploy {
         Write-Fail 'push rejected - pull first, or check your credentials'
         exit 1
     }
-    Write-Ok 'pushed - Netlify will redeploy from this branch'
+    Write-Ok 'pushed - Netlify builds the branch configured in its dashboard'
 
     if (Test-Tool netlify) {
         Write-Host ''
         $answer = Read-Host '  Netlify CLI detected. Deploy to production now? (y/N)'
-        if ($answer -eq 'y') { netlify deploy --prod --dir . }
+        if ($answer -eq 'y') { netlify deploy --prod --build }
     }
     exit 0
 }
@@ -388,7 +377,7 @@ function Invoke-Sql {
     }
 
     Write-Host '  applying supabase-schema.sql ...' -ForegroundColor DarkGray
-    psql $ConnectionString -v ON_ERROR_STOP=1 -f supabase-schema.sql
+    psql $ConnectionString --single-transaction -v ON_ERROR_STOP=1 -f supabase-schema.sql
     if ($LASTEXITCODE -ne 0) { Write-Fail 'schema failed - see the error above'; exit 1 }
 
     Write-Ok 'schema applied (idempotent - safe to run again any time)'

@@ -125,6 +125,8 @@
 
   /* Game ids that do not match their icon key */
   P.nhie = P.neverHave;
+  P.storyRelay = P.storyBuilder;
+  P.postcards = '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>';
 
   function svg(name, size) {
     const body = P[name];
@@ -152,7 +154,7 @@
   }
 
   function avatarHtml(emoji, cls) {
-    const e = emoji || '🙂';
+    const e = AVATARS.includes(emoji) ? emoji : '🙂';
     return '<span class="dv-av ' + (cls || '') + '" aria-hidden="true">' + e + '</span>';
   }
 

@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap" media="print" onload="this.media='all'">
 
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 <div id="app-root">
@@ -30,6 +30,8 @@
     <div class="brand-sub">PARTY EDITION</div>
     <div class="brand-tagline">Games for Long-Distance Couples &amp; Besties &#10024;</div>
   </div>
+
+  <p id="app-status" class="app-status" role="status" aria-live="polite"></p>
 
   <div id="landing-view" class="glass-card animate-fade">
     <h2 style="text-align:center;margin-bottom:6px;">Welcome Back!</h2>
@@ -51,26 +53,27 @@
     <div style="text-align:center;opacity:0.5;margin:10px 0;font-size:0.85rem;">OR</div>
 
     <div style="display:flex;gap:10px;">
-      <input id="join-room-code" class="input-field" placeholder="4-DIGIT CODE" maxlength="4" inputmode="numeric" autocomplete="off" aria-label="Room code" style="flex:1;text-align:center;letter-spacing:3px;font-weight:900;"/>
+      <input id="join-room-code" class="input-field" placeholder="INVITE CODE" maxlength="6" autocapitalize="characters" spellcheck="false" autocomplete="off" aria-label="Six-character room code" style="flex:1;text-align:center;letter-spacing:3px;font-weight:900;"/>
       <button id="btn-join-room" class="btn-secondary" style="flex:1;">Join Room</button>
     </div>
 
-    <p style="margin-top:18px;font-size:0.72rem;opacity:0.55;text-align:center;">USA &#8644; Nigeria &bull; Live sync &bull; No reload</p>
+    <p style="margin-top:18px;font-size:0.72rem;opacity:0.55;text-align:center;">Just the two of you &bull; No account setup</p>
   </div>
 
   <div id="game-view" style="display:none;"></div>
 </div>
 
-<script src="config.js?v=11"></script>
-<script src="supabase-lite.js?v=11"></script>
-<script src="banks.js?v=11"></script>
-<script src="app.js?v=15"></script>
-<script src="minigames.js?v=11"></script>
-<script src="deck.js?v=16"></script>
-<script src="icons.js?v=14"></script>
-<script src="partygames.js?v=13"></script>
-<script src="social.js?v=16"></script>
-<script src="features.js?v=11"></script>
+<script src="config.js?v=17"></script>
+<script src="supabase-lite.js?v=17"></script>
+<script src="banks.js?v=17"></script>
+<script src="app.js?v=17"></script>
+<script src="minigames.js?v=17"></script>
+<script src="deck.js?v=17"></script>
+<script src="icons.js?v=17"></script>
+<script src="partygames.js?v=17"></script>
+<script src="social.js?v=17"></script>
+<script src="features.js?v=17"></script>
+<script src="duogames.js?v=17"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {

@@ -1,0 +1,8 @@
+node_modules/
+__pycache__/
+*.dump
+*.backup
+/private/
+.env
+.env.*
+/dist/
